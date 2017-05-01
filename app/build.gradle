@@ -37,6 +37,9 @@ android {
             resValue "string", "app_name", "SkyTube Extra"
         }
     }
+    lintOptions {
+          abortOnError false
+      }
 }
 
 configurations {
