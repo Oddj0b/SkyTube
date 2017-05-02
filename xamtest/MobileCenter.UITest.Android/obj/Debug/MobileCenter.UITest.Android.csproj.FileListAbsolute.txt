@@ -1,0 +1,9 @@
+C:\Users\Developer\src\SkyTube\xamtest\MobileCenter.UITest.Android\bin\Debug\MobileCenter.UITest.Android.dll
+C:\Users\Developer\src\SkyTube\xamtest\MobileCenter.UITest.Android\bin\Debug\MobileCenter.UITest.Android.pdb
+C:\Users\Developer\src\SkyTube\xamtest\MobileCenter.UITest.Android\bin\Debug\nunit.framework.dll
+C:\Users\Developer\src\SkyTube\xamtest\MobileCenter.UITest.Android\bin\Debug\Xamarin.UITest.dll
+C:\Users\Developer\src\SkyTube\xamtest\MobileCenter.UITest.Android\bin\Debug\Xamarin.UITest.xml
+C:\Users\Developer\src\SkyTube\xamtest\MobileCenter.UITest.Android\bin\Debug\nunit.framework.xml
+C:\Users\Developer\src\SkyTube\xamtest\MobileCenter.UITest.Android\obj\Debug\MobileCenter.UITest.Android.csprojResolveAssemblyReference.cache
+C:\Users\Developer\src\SkyTube\xamtest\MobileCenter.UITest.Android\obj\Debug\MobileCenter.UITest.Android.dll
+C:\Users\Developer\src\SkyTube\xamtest\MobileCenter.UITest.Android\obj\Debug\MobileCenter.UITest.Android.pdb
