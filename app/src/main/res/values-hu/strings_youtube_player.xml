@@ -1,11 +1,12 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <resources>
 	<string name="error_stream_err_unavailable">A hibaüzenet nem elérhető.</string>
-	<string name="error_stream_decryption_fail">A Youtube szolgáltatáshoz tartozó dekódoló kód betöltése sikertelen.</string>
+	<string name="error_stream_decryption_fail">A YouTube szolgáltatáshoz tartozó dekódoló kód betöltése sikertelen.</string>
 	<string name="error_stream_parse_error">Olvasási hiba.</string>
 
 	<string name="error_video_play">Videólejátszási Hiba</string>
 	<string name="error_video_streams_empty">The video %s has no streams!</string>
+	<string name="error_video_streams">An error has occurred while retrieving video\'s streams.</string>
 	<string name="error_get_video_desc">A videóleírás lekérése közben hiba lépett fel.</string>
 	<string name="error_invalid_url">Érvénytelen videó URL:  %s</string>
 
@@ -31,4 +32,8 @@
 	<string name="play">Lejátszás</string>
 	<string name="cancel">Mégsem</string>
 	<string name="clear">Törlés</string>
+
+	<string name="tutorial_comments_icon">Swipe to the left to view comments.</string>
+	<string name="tutorial_video_info_icon">Swipe to the top to view information about the video.</string>
+	<string name="tutorial_pause_video">Double tap to pause or play a video.</string>
 </resources>

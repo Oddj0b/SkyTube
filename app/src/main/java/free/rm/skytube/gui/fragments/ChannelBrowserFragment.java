@@ -17,13 +17,15 @@
 
 package free.rm.skytube.gui.fragments;
 
-import android.os.AsyncTask;
+import android.content.Context;
 import android.os.Bundle;
+import android.support.design.widget.TabLayout;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentPagerAdapter;
+import android.support.v4.view.ViewPager;
 import android.support.v7.app.ActionBar;
-import android.support.v7.widget.GridLayoutManager;
-import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -31,28 +33,36 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.RequestOptions;
 
-import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 import free.rm.skytube.R;
-import free.rm.skytube.businessobjects.MainActivityListener;
-import free.rm.skytube.businessobjects.VideoCategory;
-import free.rm.skytube.businessobjects.YouTubeChannel;
-import free.rm.skytube.businessobjects.YouTubeVideo;
-import free.rm.skytube.businessobjects.db.SubscribeToChannelTask;
-import free.rm.skytube.gui.businessobjects.LoadingProgressBar;
-import free.rm.skytube.gui.businessobjects.SubsAdapter;
+import free.rm.skytube.businessobjects.YouTube.Tasks.GetYouTubeChannelInfoTask;
+import free.rm.skytube.businessobjects.YouTube.POJOs.YouTubeChannel;
+import free.rm.skytube.businessobjects.YouTube.POJOs.YouTubeVideo;
+import free.rm.skytube.gui.businessobjects.fragments.FragmentEx;
+import free.rm.skytube.gui.businessobjects.adapters.SubsAdapter;
 import free.rm.skytube.gui.businessobjects.SubscribeButton;
-import free.rm.skytube.gui.businessobjects.VideoGridAdapter;
+import free.rm.skytube.gui.businessobjects.fragments.TabFragment;
 
 /**
  * A Fragment that displays information about a channel.
+ *
+ * This fragment is made up of two other fragments:
+ * <ul>
+ *     <li>{@link ChannelVideosFragment}</li>
+ *     <li>{@link ChannelPlaylistsFragment}.</li>
+ * </ul>
  */
-public class ChannelBrowserFragment extends BaseVideosGridFragment {
+public class ChannelBrowserFragment extends FragmentEx {
 
 	private YouTubeChannel		channel = null;
-	private RecyclerView		gridView;
+
+	public static final String FRAGMENT_CHANNEL_VIDEOS = "ChannelBrowserFragment.FRAGMENT_CHANNEL_VIDEOS";
+	public static final String FRAGMENT_CHANNEL_PLAYLISTS = "ChannelBrowserFragment.FRAGMENT_CHANNEL_PLAYLISTS";
 
 	private ImageView 			channelThumbnailImage = null;
 	private ImageView			channelBannerImage = null;
@@ -63,94 +73,139 @@ public class ChannelBrowserFragment extends BaseVideosGridFragment {
 	public static final String CHANNEL_OBJ = "ChannelBrowserFragment.ChannelObj";
 	public static final String CHANNEL_ID  = "ChannelBrowserFragment.ChannelID";
 
+	// The fragments that will be displayed
+	private ChannelVideosFragment       channelVideosFragment;
+	private ChannelPlaylistsFragment    channelPlaylistsFragment;
+	private ChannelAboutFragment        channelAboutFragment;
+
+	/** List of fragments that will be displayed as tabs. */
+	private List<TabFragment> channelBrowserFragmentList = new ArrayList<>();
+
+	private ChannelPagerAdapter channelPagerAdapter;
+	private ViewPager viewPager;
+
 
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 		final String channelId;
+		final Bundle bundle = getArguments();
+
+		if(savedInstanceState != null) {
+			channelVideosFragment = (ChannelVideosFragment)getChildFragmentManager().getFragment(savedInstanceState, FRAGMENT_CHANNEL_VIDEOS);
+			channelPlaylistsFragment = (ChannelPlaylistsFragment)getChildFragmentManager().getFragment(savedInstanceState, FRAGMENT_CHANNEL_PLAYLISTS);
+		}
 
 		// we need to create a YouTubeChannel object:  this can be done by either:
 		//   (1) the YouTubeChannel object is passed to this Fragment
 		//   (2) passing the channel ID... a task is then created to create a YouTubeChannel
 		//       instance using the given channel ID
-		if (getArguments().getSerializable(CHANNEL_OBJ) != null) {
-			this.channel = (YouTubeChannel) getArguments().getSerializable(CHANNEL_OBJ);
+		if (bundle != null  &&  bundle.getSerializable(CHANNEL_OBJ) != null) {
+			this.channel = (YouTubeChannel) bundle.getSerializable(CHANNEL_OBJ);
 			channelId = channel.getId();
 		} else {
-			channelId = getArguments().getString(CHANNEL_ID);
+			channelId = bundle.getString(CHANNEL_ID);
 		}
 
 		// inflate the layout for this fragment
 		View fragment = inflater.inflate(R.layout.fragment_channel_browser, container, false);
+		viewPager = fragment.findViewById(R.id.pager);
+
+		TabLayout tabLayout = fragment.findViewById(R.id.tab_layout);
+		tabLayout.setupWithViewPager(viewPager);
+
+		tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+			@Override
+			public void onTabSelected(TabLayout.Tab tab) {
+				viewPager.setCurrentItem(tab.getPosition());
+			}
+
+			@Override
+			public void onTabUnselected(TabLayout.Tab tab) {
+			}
+
+			@Override
+			public void onTabReselected(TabLayout.Tab tab) {
+			}
+		});
+
+		viewPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
+			@Override
+			public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
+			}
+
+			@Override
+			public void onPageSelected(int position) {
+				channelBrowserFragmentList.get(position).onFragmentSelected();
+			}
+
+			@Override
+			public void onPageScrollStateChanged(int state) {
+			}
+		});
 
 		// setup the toolbar/actionbar
-		Toolbar toolbar = (Toolbar) fragment.findViewById(R.id.toolbar);
+		Toolbar toolbar = fragment.findViewById(R.id.toolbar);
 		setSupportActionBar(toolbar);
 		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
-		channelBannerImage = (ImageView) fragment.findViewById(R.id.channel_banner_image_view);
-		channelThumbnailImage = (ImageView) fragment.findViewById(R.id.channel_thumbnail_image_view);
-		channelSubscribersTextView = (TextView) fragment.findViewById(R.id.channel_subs_text_view);
-		channelSubscribeButton = (SubscribeButton) fragment.findViewById(R.id.channel_subscribe_button);
+		channelBannerImage = fragment.findViewById(R.id.channel_banner_image_view);
+		channelThumbnailImage = fragment.findViewById(R.id.channel_thumbnail_image_view);
+		channelSubscribersTextView = fragment.findViewById(R.id.channel_subs_text_view);
+		channelSubscribeButton = fragment.findViewById(R.id.channel_subscribe_button);
+		channelSubscribeButton.setFetchChannelVideosOnSubscribe(false);
+		if(channel != null)
+				channelSubscribeButton.setChannel(channel);
 		channelSubscribeButton.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View v) {
-				// If we're subscribing to the channel, save the list of videos we have into the channel (to be stored in the database)
+				// If we're subscribing to the channel, save the list of videos we have into the channel (to be stored in the database by SubscribeToChannelTask)
 				if(!channel.isUserSubscribed()) {
-					Iterator<YouTubeVideo> iterator = videoGridAdapter.getIterator();
+					Iterator<YouTubeVideo> iterator = channelVideosFragment.getVideoGridAdapter().getIterator();
 					while (iterator.hasNext()) {
 						channel.addYouTubeVideo(iterator.next());
 					}
 				}
-				// subscribe / unsubscribe to this video's channel
-				new SubscribeToChannelTask(channelSubscribeButton, channel).execute();
 			}
 		});
 
 		if (channel == null) {
 			if (task == null) {
-				task = new GetChannelInfoTask();
+				task = new GetChannelInfoTask(getContext());
 				task.execute(channelId);
 			}
 		} else {
 			initViews();
 		}
-
-		gridView = (RecyclerView) fragment.findViewById(R.id.grid_view);
-
-		// set up the loading progress bar
-		LoadingProgressBar.get().setProgressBar(fragment.findViewById(R.id.loading_progress_bar));
-
-		if (videoGridAdapter == null) {
-			videoGridAdapter = new VideoGridAdapter(getActivity(), false /*hide channel name*/);
-			videoGridAdapter.setVideoCategory(VideoCategory.CHANNEL_VIDEOS, channelId);
-		} else {
-			videoGridAdapter.setContext(getActivity());
-		}
-		videoGridAdapter.setListener((MainActivityListener)getActivity());
-		if(channel != null)
-			videoGridAdapter.setYouTubeChannel(channel);
-
-		this.gridView.setHasFixedSize(false);
-		this.gridView.setLayoutManager(new GridLayoutManager(getActivity(), getResources().getInteger(R.integer.video_grid_num_columns)));
-		this.gridView.setAdapter(this.videoGridAdapter);
-
 		return fragment;
 	}
 
+	@Override
+	public void onSaveInstanceState(Bundle outState) {
+		super.onSaveInstanceState(outState);
+		if(channelVideosFragment != null)
+			getChildFragmentManager().putFragment(outState, FRAGMENT_CHANNEL_VIDEOS, channelVideosFragment);
+		if(channelPlaylistsFragment != null)
+			getChildFragmentManager().putFragment(outState, FRAGMENT_CHANNEL_PLAYLISTS, channelPlaylistsFragment);
+	}
 
 	/**
 	 * Initialise views that are related to {@link #channel}.
 	 */
 	private void initViews() {
 		if (channel != null) {
+			channelPagerAdapter = new ChannelPagerAdapter(getChildFragmentManager());
+			viewPager.setOffscreenPageLimit(2);
+			viewPager.setAdapter(channelPagerAdapter);
+
+
 			Glide.with(getActivity())
 					.load(channel.getThumbnailNormalUrl())
-					.placeholder(R.drawable.channel_thumbnail_default)
+					.apply(new RequestOptions().placeholder(R.drawable.channel_thumbnail_default))
 					.into(channelThumbnailImage);
 
 			Glide.with(getActivity())
 					.load(channel.getBannerUrl())
-					.placeholder(R.drawable.banner_default)
+					.apply(new RequestOptions().placeholder(R.drawable.banner_default))
 					.into(channelBannerImage);
 
 			channelSubscribersTextView.setText(channel.getTotalSubscribers());
@@ -186,32 +241,83 @@ public class ChannelBrowserFragment extends BaseVideosGridFragment {
 
 	////////////////////////////////////////////////////////////////////////////////////////////////
 
-	private class GetChannelInfoTask extends AsyncTask<String, Void, YouTubeChannel> {
+	/**
+	 * A task that given a channel ID it will try to initialize and return {@link YouTubeChannel}.
+	 */
+	private class GetChannelInfoTask extends GetYouTubeChannelInfoTask {
 
-		private final String TAG = GetChannelInfoTask.class.getSimpleName();
-
-		@Override
-		protected YouTubeChannel doInBackground(String... channelId) {
-			YouTubeChannel chn = new YouTubeChannel();
-
-			try {
-				// initialise the channel
-				chn.init(channelId[0]);
-			} catch (IOException e) {
-				Log.e(TAG, "Unable to get channel info.  ChannelID=" + channelId[0], e);
-				chn = null;
-			}
-
-			return chn;
+		GetChannelInfoTask(Context ctx) {
+			super(ctx,null);
 		}
 
 		@Override
 		protected void onPostExecute(YouTubeChannel youTubeChannel) {
-			ChannelBrowserFragment.this.channel = youTubeChannel;
-			ChannelBrowserFragment.this.videoGridAdapter.setYouTubeChannel(youTubeChannel);
+			if (youTubeChannel == null) {
+				showError();
+				return;
+			}
+			// In the event this fragment is passed a channel id and not a channel object, set the
+			// channel the subscribe button is for since there wasn't a channel object to set when
+			// the button was created.
+			channel = youTubeChannel;
 			initViews();
+			channelSubscribeButton.setChannel(youTubeChannel);
+			channelVideosFragment.setYouTubeChannel(youTubeChannel);
 		}
 
 	}
 
+
+	private class ChannelPagerAdapter extends FragmentPagerAdapter {
+		public ChannelPagerAdapter(FragmentManager fm) {
+			super(fm);
+
+			// Initialize fragments
+			if (channelVideosFragment == null)
+				channelVideosFragment = new ChannelVideosFragment();
+
+			if (channelPlaylistsFragment == null)
+				channelPlaylistsFragment = new ChannelPlaylistsFragment();
+
+			if (channelAboutFragment == null)
+				channelAboutFragment = new ChannelAboutFragment();
+
+			Bundle bundle = new Bundle();
+			bundle.putSerializable(CHANNEL_OBJ, channel);
+
+			channelVideosFragment.setArguments(bundle);
+			channelPlaylistsFragment.setArguments(bundle);
+			channelAboutFragment.setArguments(bundle);
+
+			channelBrowserFragmentList.clear();
+			channelBrowserFragmentList.add(channelVideosFragment);
+			channelBrowserFragmentList.add(channelPlaylistsFragment);
+			channelBrowserFragmentList.add(channelAboutFragment);
+		}
+
+		@Override
+		public Fragment getItem(int position) {
+			return channelBrowserFragmentList.get(position);
+		}
+
+		@Override
+		public int getCount() {
+			return channelBrowserFragmentList.size();
+		}
+
+		@Override
+		public CharSequence getPageTitle(int position) {
+			return channelBrowserFragmentList.get(position).getFragmentName();
+		}
+	}
+
+	/**
+	 * Return the Channel Playlists Fragment. This is needed so that the fragment can have a reference to MainActivity
+	 * @return {@link free.rm.skytube.gui.fragments.ChannelPlaylistsFragment}
+	 */
+	public ChannelPlaylistsFragment getChannelPlaylistsFragment() {
+		if(channelPlaylistsFragment == null)
+			channelPlaylistsFragment = new ChannelPlaylistsFragment();
+		return channelPlaylistsFragment;
+	}
 }

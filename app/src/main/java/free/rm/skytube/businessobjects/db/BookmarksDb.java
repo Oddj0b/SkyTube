@@ -21,7 +21,6 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteOpenHelper;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -29,13 +28,14 @@ import com.google.gson.reflect.TypeToken;
 import java.util.ArrayList;
 import java.util.List;
 
-import free.rm.skytube.businessobjects.YouTubeVideo;
-import free.rm.skytube.gui.app.SkyTubeApp;
+import free.rm.skytube.app.SkyTubeApp;
+import free.rm.skytube.businessobjects.YouTube.POJOs.YouTubeVideo;
+import free.rm.skytube.businessobjects.interfaces.OrderableDatabase;
 
 /**
  * A database (DB) that stores user's bookmarked videos.
  */
-public class BookmarksDb extends SQLiteOpenHelper {
+public class BookmarksDb extends SQLiteOpenHelperEx implements OrderableDatabase {
 	private static volatile BookmarksDb bookmarksDb = null;
 	private static boolean hasUpdated = false;
 
@@ -58,6 +58,11 @@ public class BookmarksDb extends SQLiteOpenHelper {
 		return bookmarksDb;
 	}
 
+
+	@Override
+	protected void clearDatabaseInstance() {
+		bookmarksDb = null;
+	}
 
 	@Override
 	public void onCreate(SQLiteDatabase db) {
@@ -105,10 +110,6 @@ public class BookmarksDb extends SQLiteOpenHelper {
 	 * @return True if the video has been unbookmarked; false otherwise.
 	 */
 	public boolean remove(YouTubeVideo video) {
-		getWritableDatabase().delete(BookmarksTable.TABLE_NAME,
-						BookmarksTable.COL_YOUTUBE_VIDEO_ID + " = ?",
-						new String[]{video.getId()});
-
 		int rowsDeleted = getWritableDatabase().delete(BookmarksTable.TABLE_NAME,
 						BookmarksTable.COL_YOUTUBE_VIDEO_ID + " = ?",
 						new String[]{video.getId()});
@@ -151,6 +152,7 @@ public class BookmarksDb extends SQLiteOpenHelper {
 	 *
 	 * @param videos List of Videos to update their order.
 	 */
+	@Override
 	public void updateOrder(List<YouTubeVideo> videos) {
 		int order = videos.size();
 
@@ -215,12 +217,17 @@ public class BookmarksDb extends SQLiteOpenHelper {
 		if(cursor.moveToNext()) {
 			do {
 				byte[] blob = cursor.getBlob(cursor.getColumnIndex(BookmarksTable.COL_YOUTUBE_VIDEO));
+
+				// convert JSON into YouTubeVideo
 				YouTubeVideo video = new Gson().fromJson(new String(blob), new TypeToken<YouTubeVideo>(){}.getType());
+				// regenerate the video's PublishDatePretty (e.g. 5 hours ago)
+				video.forceRefreshPublishDatePretty();
+				// add the video to the list
 				videos.add(video);
 			} while(cursor.moveToNext());
 		}
-		cursor.close();
 
+		cursor.close();
 		return videos;
 	}
 

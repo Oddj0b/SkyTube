@@ -22,12 +22,14 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.preference.PreferenceManager;
 import android.util.Log;
 
 import free.rm.skytube.R;
-import free.rm.skytube.businessobjects.YouTubeAPIKey;
-import free.rm.skytube.businessobjects.YouTubeVideo;
+import free.rm.skytube.app.SkyTubeApp;
+import free.rm.skytube.businessobjects.YouTube.POJOs.YouTubeAPIKey;
+import free.rm.skytube.businessobjects.YouTube.POJOs.YouTubeVideo;
 import free.rm.skytube.gui.activities.YouTubePlayerActivity;
 import free.rm.skytube.gui.fragments.YouTubePlayerFragment;
 
@@ -44,14 +46,28 @@ public class YouTubePlayer {
 	 * @param youTubeVideo Video to be viewed.
 	 */
 	public static void launch(YouTubeVideo youTubeVideo, Context context) {
-		if (youTubeVideo != null) {
-			// if the user has selected to play the videos using the official YouTube player
-			// (in the preferences/settings) ...
-			if (useOfficialYouTubePlayer(context)) {
-				launchOfficialYouTubePlayer(youTubeVideo.getId(), context);
-			} else {
-				launchCustomYouTubePlayer(youTubeVideo, context);
-			}
+		// if the user has selected to play the videos using the official YouTube player
+		// (in the preferences/settings) ...
+		if (useOfficialYouTubePlayer(context)) {
+			launchOfficialYouTubePlayer(youTubeVideo.getId(), context);
+		} else {
+			launchCustomYouTubePlayer(youTubeVideo, context);
+		}
+	}
+
+
+	/**
+	 * Launches the custom-made YouTube player so that the user can view the selected video.
+	 *
+	 * @param videoUrl URL of the video to be watched.
+	 */
+	public static void launch(String videoUrl, Context context) {
+		// if the user has selected to play the videos using the official YouTube player
+		// (in the preferences/settings) ...
+		if (useOfficialYouTubePlayer(context)) {
+			launchOfficialYouTubePlayer(YouTubeVideo.getYouTubeIdFromUrl(videoUrl), context);
+		} else {
+			launchCustomYouTubePlayer(videoUrl, context);
 		}
 	}
 
@@ -63,8 +79,10 @@ public class YouTubePlayer {
 	 * @return True if the user wants to use the official player; false otherwise.
 	 */
 	private static boolean useOfficialYouTubePlayer(Context context) {
-		SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(context);
-		return sharedPref.getBoolean(context.getString(R.string.pref_key_use_offical_player), false);
+		SharedPreferences   sharedPref = PreferenceManager.getDefaultSharedPreferences(context);
+		String              str = sharedPref.getString(SkyTubeApp.getStr(R.string.pref_key_choose_player), SkyTubeApp.getStr(R.string.pref_default_player_value));
+
+		return  (str.equals(SkyTubeApp.getStr(R.string.pref_official_player_value)));
 	}
 
 
@@ -94,11 +112,24 @@ public class YouTubePlayer {
 
 
 	/**
-	 * Launch the custom-made YouTube player.
+	 * Launches the custom-made YouTube player so that the user can view the selected video.
+	 *
+	 * @param youTubeVideo Video to be viewed.
 	 */
-	private static void launchCustomYouTubePlayer(YouTubeVideo youTubeVideo, Context context) {
+	public static void launchCustomYouTubePlayer(YouTubeVideo youTubeVideo, Context context) {
 		Intent i = new Intent(context, YouTubePlayerActivity.class);
 		i.putExtra(YouTubePlayerFragment.YOUTUBE_VIDEO_OBJ, youTubeVideo);
+		context.startActivity(i);
+	}
+
+
+	/**
+	 * Launch the custom-made YouTube player.
+	 */
+	private static void launchCustomYouTubePlayer(String videoUrl, Context context) {
+		Intent i = new Intent(context, YouTubePlayerActivity.class);
+		i.setAction(Intent.ACTION_VIEW);
+		i.setData(Uri.parse(videoUrl));
 		context.startActivity(i);
 	}
 

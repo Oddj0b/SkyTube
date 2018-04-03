@@ -17,7 +17,15 @@
 
 package free.rm.skytube.businessobjects;
 
-import android.util.Log;
+import free.rm.skytube.businessobjects.YouTube.GetBookmarksVideos;
+import free.rm.skytube.businessobjects.YouTube.GetChannelVideos;
+import free.rm.skytube.businessobjects.YouTube.GetDownloadedVideos;
+import free.rm.skytube.businessobjects.YouTube.GetFeaturedVideos;
+import free.rm.skytube.businessobjects.YouTube.GetMostPopularVideos;
+import free.rm.skytube.businessobjects.YouTube.GetPlaylistVideos;
+import free.rm.skytube.businessobjects.YouTube.GetYouTubeVideoBySearch;
+import free.rm.skytube.businessobjects.YouTube.GetYouTubeVideos;
+import free.rm.skytube.businessobjects.db.Tasks.GetSubscriptionsVideosFromDb;
 
 /**
  * Represents a video category/group.
@@ -34,44 +42,26 @@ public enum VideoCategory {
 	/** Videos pertaining to the user's subscriptions feed */
 	SUBSCRIPTIONS_FEED_VIDEOS (4),
 	/** Videos bookmarked by the user */
-	BOOKMARKS_VIDEOS (5);
+	BOOKMARKS_VIDEOS (5),
+	/** Videos belonging to a playlist */
+	PLAYLIST_VIDEOS (7),
+	/** Videos that have been downloaded */
+	DOWNLOADED_VIDEOS (8);
 
 	// *****************
-	// DON'T FORGET to update getVideoCategory() and createGetYouTubeVideos() methods...
+	// DON'T FORGET to update #createGetYouTubeVideos() methods...
 	// *****************
 
 	private final int id;
-	private static final String TAG = VideoCategory.class.getSimpleName();
-
 
 
 	VideoCategory(int id) {
 		this.id = id;
 	}
 
-
 	/**
-	 * Convert the given id integer number to {@link VideoCategory}.
-	 *
-	 * @param id ID number representing the position of the item in video_categories array (see
-	 *           the respective strings XML file).
-	 *
-	 * @return A new instance of {@link VideoCategory}.
-	 */
-	public static VideoCategory getVideoCategory(int id) {
-		if (id < FEATURED.id  ||  id > CHANNEL_VIDEOS.id) {
-			Log.e(TAG, "ILLEGAL ID VALUE=" + id);
-			Log.e(TAG, "Do NOT forget to update VideoCategories enum.");
-			id = FEATURED.id;
-		}
-
-		return VideoCategory.values()[id];
-	}
-
-
-	/**
-	 * Creates a new instance of {@link GetFeaturedVideos} or {@link GetMostPopularVideos} depending
-	 * on the video category.
+	 * Creates a new instance of {@link GetFeaturedVideos} or {@link GetMostPopularVideos} ...etc
+	 * depending on the video category.
 	 *
 	 * @return New instance of {@link GetYouTubeVideos}.
 	 */
@@ -85,11 +75,15 @@ public enum VideoCategory {
 		else if (id == CHANNEL_VIDEOS.id)
 			return new GetChannelVideos();
 		else if (id == SUBSCRIPTIONS_FEED_VIDEOS.id)
-			return new GetSubscriptionsVideos();
+			return new GetSubscriptionsVideosFromDb();
 		else if (id == BOOKMARKS_VIDEOS.id)
 			return new GetBookmarksVideos();
+		else if (id == PLAYLIST_VIDEOS.id)
+			return new GetPlaylistVideos();
+		else if (id == DOWNLOADED_VIDEOS.id)
+			return new GetDownloadedVideos();
 
-		// this will notify the developer is he forgot to amend this method when a new type is added
+		// this will notify the developer that he forgot to edit this method when a new type is added
 		throw new UnsupportedOperationException();
 	}
 

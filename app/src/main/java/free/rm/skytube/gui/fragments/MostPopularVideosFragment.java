@@ -18,8 +18,8 @@
 package free.rm.skytube.gui.fragments;
 
 import free.rm.skytube.R;
+import free.rm.skytube.app.SkyTubeApp;
 import free.rm.skytube.businessobjects.VideoCategory;
-import free.rm.skytube.gui.app.SkyTubeApp;
 
 /**
  * A fragment that holds today's most popular videos.
@@ -32,12 +32,8 @@ public class MostPopularVideosFragment extends VideosGridFragment {
 	}
 
 	@Override
-	protected String getFragmentName() {
+	public String getFragmentName() {
 		return SkyTubeApp.getStr(R.string.most_popular);
-	}
-
-	@Override
-	protected void onFragmentSelected() {
 	}
 
 }

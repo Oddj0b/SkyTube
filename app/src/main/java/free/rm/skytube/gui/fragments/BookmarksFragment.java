@@ -19,59 +19,29 @@ package free.rm.skytube.gui.fragments;
 
 import android.os.Bundle;
 import android.support.annotation.Nullable;
-import android.support.v7.widget.helper.ItemTouchHelper;
-import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
 
-import butterknife.Bind;
+import butterknife.BindView;
 import free.rm.skytube.R;
+import free.rm.skytube.app.SkyTubeApp;
 import free.rm.skytube.businessobjects.AsyncTaskParallel;
-import free.rm.skytube.businessobjects.MainActivityListener;
 import free.rm.skytube.businessobjects.VideoCategory;
 import free.rm.skytube.businessobjects.db.BookmarksDb;
-import free.rm.skytube.gui.app.SkyTubeApp;
-import free.rm.skytube.gui.businessobjects.SimpleItemTouchHelperCallback;
-import free.rm.skytube.gui.businessobjects.bookmarksGridAdapter;
+import free.rm.skytube.gui.businessobjects.adapters.OrderableVideoGridAdapter;
+import free.rm.skytube.gui.businessobjects.fragments.OrderableVideosGridFragment;
 
 /**
  * Fragment that displays bookmarked videos.
  */
-public class BookmarksFragment extends VideosGridFragment implements BookmarksDb.BookmarksDbListener {
-	@Bind(R.id.noBookmarkedVideosText)
+public class BookmarksFragment extends OrderableVideosGridFragment implements BookmarksDb.BookmarksDbListener {
+	@BindView(R.id.noBookmarkedVideosText)
 	View noBookmarkedVideosText;
-
-	private bookmarksGridAdapter bookmarksGridAdapter;
-
 
 	@Override
 	public void onCreate(@Nullable Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		setLayoutResource(R.layout.videos_gridview_bookmarks);
+		videoGridAdapter = new OrderableVideoGridAdapter(getActivity(), BookmarksDb.getBookmarksDb());
 	}
-
-
-	@Override
-	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-		View view = super.onCreateView(inflater, container, savedInstanceState);
-		videoGridAdapter = null;
-
-		if (bookmarksGridAdapter == null) {
-			bookmarksGridAdapter = new bookmarksGridAdapter(getActivity());
-		} else {
-			bookmarksGridAdapter.setContext(getActivity());
-		}
-
-		bookmarksGridAdapter.setListener((MainActivityListener)getActivity());
-		gridView.setAdapter(bookmarksGridAdapter);
-
-		ItemTouchHelper.Callback callback = new SimpleItemTouchHelperCallback(bookmarksGridAdapter);
-		ItemTouchHelper touchHelper = new ItemTouchHelper(callback);
-		touchHelper.attachToRecyclerView(gridView);
-
-		return view;
-	}
-
 
 	@Override
 	public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
@@ -87,31 +57,41 @@ public class BookmarksFragment extends VideosGridFragment implements BookmarksDb
 
 
 	@Override
-	protected void onFragmentSelected() {
+	public void onFragmentSelected() {
+		super.onFragmentSelected();
+
 		if (BookmarksDb.getBookmarksDb().isHasUpdated()) {
 			populateList();
 			BookmarksDb.getBookmarksDb().setHasUpdated(false);
 		}
 	}
-
+	
 
 	@Override
 	public void onBookmarksDbUpdated() {
 		populateList();
-		bookmarksGridAdapter.refresh();
+		if(videoGridAdapter != null)
+			videoGridAdapter.refresh();
 	}
+	
+
+	@Override
+	protected int getLayoutResource() {
+		return R.layout.fragment_bookmarks;
+	}
+	
 
 	@Override
 	protected VideoCategory getVideoCategory() {
 		return VideoCategory.BOOKMARKS_VIDEOS;
 	}
+	
 
 	@Override
-	protected String getFragmentName() {
+	public String getFragmentName() {
 		return SkyTubeApp.getStr(R.string.bookmarks);
 	}
-
-
+	
 
 	////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -128,7 +108,6 @@ public class BookmarksFragment extends VideosGridFragment implements BookmarksDb
 			return BookmarksDb.getBookmarksDb().getTotalBookmarks();
 		}
 
-
 		@Override
 		protected void onPostExecute(Integer numVideosBookmarked) {
 			// If no videos have been bookmarked, show the text notifying the user, otherwise
@@ -141,10 +120,8 @@ public class BookmarksFragment extends VideosGridFragment implements BookmarksDb
 				noBookmarkedVideosText.setVisibility(View.GONE);
 
 				// set video category and get the bookmarked videos asynchronously
-				bookmarksGridAdapter.setVideoCategory(VideoCategory.BOOKMARKS_VIDEOS);
+				videoGridAdapter.setVideoCategory(VideoCategory.BOOKMARKS_VIDEOS);
 			}
 		}
-
 	}
-
 }

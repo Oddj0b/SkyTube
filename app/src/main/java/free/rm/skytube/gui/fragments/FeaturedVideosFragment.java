@@ -18,8 +18,8 @@
 package free.rm.skytube.gui.fragments;
 
 import free.rm.skytube.R;
+import free.rm.skytube.app.SkyTubeApp;
 import free.rm.skytube.businessobjects.VideoCategory;
-import free.rm.skytube.gui.app.SkyTubeApp;
 
 /**
  * A fragment that holds featured videos.
@@ -33,12 +33,8 @@ public class FeaturedVideosFragment extends VideosGridFragment {
 
 
 	@Override
-	protected String getFragmentName() {
+	public String getFragmentName() {
 		return SkyTubeApp.getStr(R.string.featured);
-	}
-
-	@Override
-	protected void onFragmentSelected() {
 	}
 
 }

@@ -18,7 +18,6 @@
 package free.rm.skytube.gui.fragments;
 
 import android.os.Bundle;
-import android.support.annotation.Nullable;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -29,9 +28,10 @@ import android.widget.GridView;
 import com.bumptech.glide.Glide;
 
 import free.rm.skytube.R;
-import free.rm.skytube.businessobjects.MainActivityListener;
 import free.rm.skytube.businessobjects.VideoCategory;
-import free.rm.skytube.gui.businessobjects.VideoGridAdapter;
+import free.rm.skytube.gui.businessobjects.MainActivityListener;
+import free.rm.skytube.gui.businessobjects.adapters.VideoGridAdapter;
+import free.rm.skytube.gui.businessobjects.fragments.BaseVideosGridFragment;
 
 /**
  * A fragment that will hold a {@link GridView} full of YouTube videos.
@@ -39,39 +39,28 @@ import free.rm.skytube.gui.businessobjects.VideoGridAdapter;
 public abstract class VideosGridFragment extends BaseVideosGridFragment {
 
 	protected RecyclerView	gridView;
-	private View			progressBar = null;
-	private int 			layoutResource = 0;
-
-
-	@Override
-	public void onCreate(@Nullable Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);
-		setLayoutResource(R.layout.videos_gridview);
-	}
 
 
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 		// inflate the layout for this fragment
-		View view = inflater.inflate(layoutResource, container, false);
-
-		// set up the loading progress bar
-		progressBar = view.findViewById(R.id.loading_progress_bar);
+		View view = super.onCreateView(inflater, container, savedInstanceState);
 
 		// setup the video grid view
-		gridView = (RecyclerView) view.findViewById(R.id.grid_view);
+		gridView = view.findViewById(R.id.grid_view);
 		if (videoGridAdapter == null) {
 			videoGridAdapter = new VideoGridAdapter(getActivity());
 		} else {
 			videoGridAdapter.setContext(getActivity());
 		}
-		videoGridAdapter.setProgressBar(progressBar);
+		videoGridAdapter.setSwipeRefreshLayout(swipeRefreshLayout);
 
 		if (getVideoCategory() != null)
-			videoGridAdapter.setVideoCategory(getVideoCategory());
+			videoGridAdapter.setVideoCategory(getVideoCategory(), getSearchString());
 
 		videoGridAdapter.setListener((MainActivityListener)getActivity());
 
+		gridView.setHasFixedSize(true);
 		gridView.setLayoutManager(new GridLayoutManager(getActivity(), getResources().getInteger(R.integer.video_grid_num_columns)));
 		gridView.setAdapter(videoGridAdapter);
 
@@ -85,11 +74,10 @@ public abstract class VideosGridFragment extends BaseVideosGridFragment {
 		Glide.get(getActivity()).clearMemory();
 	}
 
-	/**
-	 * In case a subclass of VideosGridFragment wants to use an alternate layout resource (e.g. Subscriptions).
- 	 */
-	protected void setLayoutResource(int layoutResource) {
-		this.layoutResource = layoutResource;
+
+	@Override
+	protected int getLayoutResource() {
+		return R.layout.videos_gridview;
 	}
 
 
@@ -100,14 +88,16 @@ public abstract class VideosGridFragment extends BaseVideosGridFragment {
 
 
 	/**
-	 * @return The fragment/tab name/title.
+	 * @return Returns the search string used when setting the video category.  (Can be used to
+	 * set the channel ID in case of VideoCategory.CHANNEL_VIDEOS).
 	 */
-	protected abstract String getFragmentName();
-
+	protected String getSearchString() {
+		return null;
+	}
 
 	/**
-	 * Will be called when the user selects this fragment/tab.
+	 * @return The fragment/tab name/title.
 	 */
-	protected abstract void onFragmentSelected();
+	public abstract String getFragmentName();
 
 }
