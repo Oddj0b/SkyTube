@@ -1,9 +1,9 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources><string name="preferences">Innstillinger</string>
 
-	<string name="pref_languages_category">Språk og regioner</string>
+	<string name="pref_languages_filter_category">Språk og regioner</string>
 	<string name="pref_title_preferred_regions">Foretrukket region</string>
-	<string name="pref_summary_preferred_regions">Velg en foretrukket region. Dette brukes til å filtrere ut videoer i \"Framhevet\"-kategorien.</string>
+	<string name="pref_summary_preferred_regions">Velg en foretrukket region. Dette brukes til å filtrere ut videoer i \"Framhevet\"-kategorien:  %s</string>
 
 	<string name="pref_title_preferred_languages">Foretrukket/de språk</string>
 	<string name="pref_summary_preferred_languages">Eksperimentelt: Velg ett eller flere språk. Dette brukes til å filtrere ut videoer i \"Mest populært\"-kategorien, og for videosøk.</string>
@@ -90,9 +90,39 @@
 	<string name="pref_title_disable_search_history">Skru av søkehistorikk</string>
 	<string name="pref_summary_disable_search_history">Hvis merket, vil søkehistorikken bli tømt og ikke brukt.</string>
 	<string name="pref_disable_search_history_deleted">Søkehistorikk slettet.</string>
-<string name="pref_blocked_channel_category">Blokkerte kanaler</string>
-	<string name="pref_title_blocked_channels_list">Blokkerte kanaler</string>
-	<string name="pref_summary_blocked_channels_list">Velg kanalene du ønsker å avblokkere, og la alt annet stå umerket.</string>
+<string name="pref_video_blocker_category">Blokkerte kanaler</string>
+	<string name="pref_title_channel_blacklist">Blokkerte kanaler</string>
+	<string name="pref_summary_channel_blacklist">Velg kanalene du ønsker å avblokkere, og la alt annet stå umerket.</string>
 <string name="pref_title_choose_player">Videoavspiller</string>
 	<string name="pref_summary_choose_player">Videoavspiller å bruke: %s</string>
-	</resources>
+	<string name="pref_title_subscriptions_alphabetical_order">Sorter kanaler alfabetisk</string>
+	<string name="pref_summary_subscriptions_alphabetical_order">Hvis valgt, vil abonnerte kanaler sorteres alfabetisk.</string>
+	<string name="unblock_button">Avblokker</string>
+	<string name="channel_blacklist_updated">Kanal-svarteliste oppdatert. Gjenoppfrisk.</string>
+	<string name="channel_blacklist_empty">Kanal-svartelisten er tom.</string>
+	<string name="no_preferred_lang_selected">Inget foretrukket språk valgt. Innstilling ignorert.</string>
+	<string name="preferred_lang_updated">Foretrukket språk oppdatert. Gjenoppfrisk.</string>
+<string name="pref_channels_filter_category">Kanalfilter</string>
+	<string name="pref_title_lang_detection_video_filtering">Videofiltrering av språkoppdagelse</string>
+	<string name="pref_summary_lang_detection_video_filtering">Bruk AI til å fastsette språk brukt i videoer og blokker dem hvis språket ikke samsvarer med dine foretrukne språk. Bør kun skrus på hvis du har en flaggskipsenhet.</string>
+	<string name="setting_updated">Innstilling oppdatert. Gjenoppfrisk videoer.</string>
+
+	<string name="pref_other_filters_category">Andre filter</string>
+	<string name="pref_title_low_views_filter">Visninger</string>
+	<string name="pref_summary_low_views_filter">Filtrer ut videoer med lave visningstall: %s</string>
+	<string name="pref_title_dislikes_filter">Liker ikke</string>
+	<string name="pref_summary_dislikes_filter">Filtrer ut videoer som mange ikke liker: %s</string>
+	<string name="pref_blocked_channel_category">Blokkerte kanaler</string>
+	<string name="pref_title_blocked_channels_list">Blokkerte kanaler</string>
+	<string name="pref_summary_blocked_channels_list">Sjekk kanalene du ønsker å avblokkere og la andre stå umerket.</string>
+
+	<string name="pref_privacy_category">Personvern</string>
+	<string name="pref_title_disable_playback_status">Skru av avspillingsstatus</string>
+	<string name="pref_summary_disable_playback_status">Hvis valgt, vil avspillingsstatus bli tømt og ikke brukt.</string>
+	<string name="pref_disable_playback_status_deleted">Avspillingsstatus slettet.</string>
+
+	<string name="pref_title_clear_playback_status">Tøm avspillingsstatus</string>
+	<string name="pref_summary_clear_playback_status">Tøm avspillingsstatus for alle videoer.</string>
+	<string name="pref_playback_status_cleared">Avspillingsstatus tømt.</string>
+
+</resources>

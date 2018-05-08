@@ -1,14 +1,14 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources><string name="preferences">偏好設定</string>
 
-	<string name="pref_languages_category">語言和區域</string>
+	<string name="pref_languages_filter_category">語言和區域</string>
 	<string name="pref_title_preferred_regions">偏好的區域</string>
-	<string name="pref_summary_preferred_regions">選擇偏好的區域。這用在「特選」影片類別中篩選出影片。</string>
+	<string name="pref_summary_preferred_regions">選擇偏好的區域。這用在「特選」影片類別中篩選出影片：%s</string>
 
 	<string name="pref_title_preferred_languages">偏好的語言</string>
 	<string name="pref_video_player_category">影片播放器</string>
 	<string name="pref_title_preferred_res">偏好的解晰度</string>
-	<string name="pref_summary_preferred_res">選擇您偏好的解晰度:  %s</string>
+	<string name="pref_summary_preferred_res">選擇您偏好的解晰度：%s</string>
 
 	<string name="pref_title_choose_player">影片播放器</string>
 	<string name="pref_summary_choose_player">要使用的影片播放器：%s</string>
@@ -19,7 +19,7 @@
 	<string name="pref_summary_import_dbs">匯入您的訂閱和書簽資料庫備份。</string>
 	<string name="databases_backing_up">正在備份…</string>
 	<string name="pref_title_import_subs">從 YouTube 匯入訂閱</string>
-	<string name="pref_summary_preferred_languages">實驗性的：選擇一個或多個偏好的語言。這使用在「最受歡迎」影片類別和影片搜尋中篩選出影片。</string>
+	<string name="pref_summary_preferred_languages">選取您偏好的語言。</string>
 
 	<string name="databases_backup_success">資料庫備份到 %s</string>
 	<string name="databases_backup_fail">備份您的資料庫已失敗。</string>
@@ -79,7 +79,33 @@
 	<string name="pref_disable_search_history_deleted">搜尋的歷史記錄已刪除。</string>
 	<string name="restart">重新啟動</string>
 
-	<string name="pref_blocked_channel_category">已阻擋頻道</string>
-	<string name="pref_title_blocked_channels_list">已阻擋頻道</string>
-	<string name="pref_summary_blocked_channels_list">勾選您想要解鎖的頻道，並讓別人不受抑制。</string>
+	<string name="pref_video_blocker_category">已阻擋頻道</string>
+	<string name="pref_title_channel_blacklist">已阻擋頻道</string>
+	<string name="pref_summary_channel_blacklist">勾選您想要解鎖的頻道，並讓別人不受抑制。</string>
+<string name="pref_title_subscriptions_alphabetical_order">按字母順序排列頻道</string>
+	<string name="pref_summary_subscriptions_alphabetical_order">如果選取，訂閱頻道將按照字母的順序排列。</string>
+	<string name="unblock_button">取消阻擋</string>
+	<string name="channel_blacklist_updated">頻道黑名單已更新。請重新整理影片。</string>
+	<string name="channel_blacklist_empty">頻道黑名單是空的。</string>
+	<string name="no_preferred_lang_selected">未選取偏號的語言。已忽略設定。</string>
+	<string name="preferred_lang_updated">偏好的語言已更新。請重新整理影片。</string>
+<string name="pref_title_lang_detection_video_filtering">語言偵測影片過濾</string>
+	<string name="pref_summary_lang_detection_video_filtering">使用 AI 來偵測要用於影片的語言，並在它們的語言不等於您偏好的語言時阻擋。應該只在高階裝置上啟用。</string>
+	<string name="setting_updated">設定已更新。請重新整理影片。</string>
+<string name="pref_channels_filter_category">頻道篩選</string>
+	<string name="pref_other_filters_category">其他篩選</string>
+	<string name="pref_title_low_views_filter">檢視</string>
+	<string name="pref_summary_low_views_filter">篩選出少觀看的影片：%s</string>
+	<string name="pref_title_dislikes_filter">不喜歡</string>
+	<string name="pref_summary_dislikes_filter">篩選出最不喜歡的影片：%s</string>
+	<string name="pref_blocked_channel_category">已阻擋的頻道</string>
+	<string name="pref_title_blocked_channels_list">已阻擋的頻道</string>
+	<string name="pref_privacy_category">隱私權</string>
+	<string name="pref_title_disable_playback_status">停用重播狀態</string>
+	<string name="pref_disable_playback_status_deleted">重播狀態已刪除。</string>
+
+	<string name="pref_title_clear_playback_status">清除重播狀態</string>
+	<string name="pref_summary_clear_playback_status">清除所有影片的重播狀態。</string>
+	<string name="pref_playback_status_cleared">重播狀態已清除。</string>
+
 </resources>

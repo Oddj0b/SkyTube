@@ -2,9 +2,9 @@
 <resources>
 	<string name="preferences">設定</string>
 
-	<string name="pref_languages_category">言語・地域</string>
+	<string name="pref_languages_filter_category">言語・地域</string>
 	<string name="pref_title_preferred_regions">お好みの地域</string>
-	<string name="pref_summary_preferred_regions">最寄りの地域を選択します。「おすすめ」ビデオのカテゴリーでビデオをフィルターする処理に使用されます。</string>
+	<string name="pref_summary_preferred_regions">最寄りの地域を選択します。「おすすめ」ビデオのカテゴリーでビデオをフィルターする処理に使用されます: %s</string>
 
 	<string name="pref_title_preferred_languages">お好みの言語</string>
 	<string name="pref_summary_preferred_languages">実験的: 1 つまたは複数の言語を選択します。「最も人気」のビデオカテゴリーで、ビデオを検索するために使用されます。</string>
@@ -92,9 +92,16 @@
 	<string name="pref_title_disable_search_history">検索履歴を無効にする</string>
 	<string name="pref_summary_disable_search_history">チェックすると、検索履歴が消去されて、使用されなくなります。</string>
 	<string name="pref_disable_search_history_deleted">検索履歴を削除しました。</string>
-<string name="pref_blocked_channel_category">ブロックされたチャンネル</string>
-	<string name="pref_title_blocked_channels_list">ブロックされたチャンネル</string>
-	<string name="pref_summary_blocked_channels_list">ブロックを解除するチャンネルをチェックして、他はオフのままにしてください。</string>
+<string name="pref_video_blocker_category">ブロックされたチャンネル</string>
+	<string name="pref_title_channel_blacklist">ブロックされたチャンネル</string>
+	<string name="pref_summary_channel_blacklist">ブロックを解除するチャンネルをチェックして、他はオフのままにしてください。</string>
 <string name="pref_title_choose_player">ビデオプレーヤー</string>
 	<string name="pref_summary_choose_player">使用するビデオプレーヤー: %s</string>
-	</resources>
+	<string name="pref_title_subscriptions_alphabetical_order">チャンネルをアルファベット順に並べ替え</string>
+	<string name="pref_summary_subscriptions_alphabetical_order">チェックすると、購読済みのチャンネルがアルファベット順に並べ替えられます。</string>
+	<string name="unblock_button">ブロック解除</string>
+	<string name="channel_blacklist_updated">チャンネルのブラックリストが更新されました。リフレッシュしてください。</string>
+	<string name="channel_blacklist_empty">チャンネルのブラックリストは空です。</string>
+	<string name="no_preferred_lang_selected">言語が選択されていません。設定は無視されます。</string>
+	<string name="preferred_lang_updated">言語を更新しました。リフレッシュしてください。</string>
+</resources>

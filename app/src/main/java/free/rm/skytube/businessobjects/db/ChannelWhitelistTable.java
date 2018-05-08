@@ -1,6 +1,6 @@
 /*
  * SkyTube
- * Copyright (C) 2017  Ramon Mifsud
+ * Copyright (C) 2018  Ramon Mifsud
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,23 +15,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package free.rm.skytube.gui.fragments.preferences;
+package free.rm.skytube.businessobjects.db;
 
-import android.os.Bundle;
-import android.preference.PreferenceFragment;
+public class ChannelWhitelistTable {
 
-import free.rm.skytube.R;
+	public static final String TABLE_NAME = "Whitelist";
+	public static final String COL_ID  = "_id";
+	public static final String COL_CHANNEL_ID = "Channel_Id";
+	public static final String COL_CHANNEL_NAME = "Channel_Name";
 
-/**
- * Preference fragment for languages and regions related settings.
- */
-public class LanguagesPreferenceFragment extends PreferenceFragment {
-
-	@Override
-	public void onCreate(Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);
-
-		addPreferencesFromResource(R.xml.preference_languages);
+	public static String getCreateStatement() {
+		return "CREATE TABLE "   + TABLE_NAME + " (" +
+				COL_ID           + " INTEGER PRIMARY KEY ASC, " +
+				COL_CHANNEL_ID   + " TEXT UNIQUE NOT NULL, " +
+				COL_CHANNEL_NAME + " TEXT NOT NULL " +
+				" )";
 	}
 
 }
