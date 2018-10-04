@@ -1,20 +1,36 @@
-vX.XX - XX XX 2018:
-	* Added search history:  search history is stored and used as suggestions for future searches.  This feature can be disabled.
-	* Volume and brightness swipe controls.
-	* Video Blocker:
+vX.XX - XX XX XXXX:
+	* Added Android 9 (API 28) support.
+	* Video gestures can now be enabled/disabled.
+	* Added Croatian translations.
+	* Updated Polish, Spanish, Japanese, French, Portuguese (Brazil), Portuguese (Portugal), Italian, Chinese (Traditional), Norwegian Bokmål, Russian and Dutch translations.
+	* Bug fixes and other minor improvements.
+
+v2.91 - 07 Sep 2018:
+	* Emergency fix: "This video is unavailable" error occurred due to recent YouTube changes.
+	* Updated Italian, French and Norwegian Bokmål translations.
+
+v2.90 - 19 Aug 2018:
+	* Added a video blocker, which includes:
 		- Channel blacklisting;
 		- Channel whitelisting;
 		- Block videos if their language is not the same as the user's preferred one(s);
 		- Low views video blocking;
-		- High dislikes video blocking.
-	* Exoplayer support.
+		- High dislikes video blocking;
+		- Icon in the toolbar displaying how many videos were blocked.
+	* Added search history:  search history is stored and used as suggestions for future searches (this feature can be disabled).
+	* Added volume and brightness swipe controls.
+	* Videos are now played using the Exoplayer.  Legacy player still supported.
 	* App now gives the user the option to resume playing (previously) partially watched videos.
     * YouTube's videos and playlists links inside the video description are now handled and opened inside SkyTube.
     * New launcher icon.
     * Subscribed channels can now be sorted alphabetically.
+    * Added tutorial for the gestures applicable to the video player.
 	* Added Japanese translations.
 	* Added Chinese (traditional) translations.
-	* Updated Russian, Norwegian Bokmål, Dutch, German, Hungarian, Italian and French translations.
+	* Added Vietnamese translations.
+	* Added Indonesian translations.
+	* Updated Russian, Norwegian Bokmål, Dutch, German, Hungarian, Turkish, Italian, Portuguese and French translations.
+	* Bug fixes and other minor improvements.
 
 v2.82 - 24 Mar 2018:
 	* Emergency fix:  API DDOS attack mitigation controls.

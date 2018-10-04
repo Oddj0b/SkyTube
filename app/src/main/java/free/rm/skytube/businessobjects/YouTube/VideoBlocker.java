@@ -17,8 +17,6 @@
 
 package free.rm.skytube.businessobjects.YouTube;
 
-import android.widget.Toast;
-
 import com.google.common.base.Optional;
 import com.optimaize.langdetect.DetectedLanguage;
 import com.optimaize.langdetect.LanguageDetector;
@@ -32,6 +30,7 @@ import com.optimaize.langdetect.text.TextObject;
 import com.optimaize.langdetect.text.TextObjectFactory;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -41,9 +40,9 @@ import java.util.Set;
 import free.rm.skytube.R;
 import free.rm.skytube.app.SkyTubeApp;
 import free.rm.skytube.businessobjects.Logger;
+import free.rm.skytube.businessobjects.YouTube.POJOs.YouTubeChannel;
 import free.rm.skytube.businessobjects.YouTube.POJOs.YouTubeVideo;
 import free.rm.skytube.businessobjects.db.ChannelFilteringDb;
-import free.rm.skytube.businessobjects.db.SubscriptionsDb;
 
 import static free.rm.skytube.app.SkyTubeApp.getStr;
 
@@ -52,54 +51,19 @@ import static free.rm.skytube.app.SkyTubeApp.getStr;
  */
 public class VideoBlocker {
 
-	/**
-	 * Default preferred language(s) -- by default, no language shall be filtered out.
-	 */
+	/** Listener that will be called once a video is blocked. */
+	private static volatile VideoBlockerListener videoBlockerListener = null;
+
+	/** Default preferred language(s) -- by default, no language shall be filtered out. */
 	private static final Set<String> defaultPrefLanguages = new HashSet<>(SkyTubeApp.getStringArrayAsList(R.array.languages_iso639_codes));
 
 
 	/**
-	 * Block a channel.  This operation depends on what filtering method was enabled by the user:
-	 * i.e. either channel blacklisting or whitelisting.
-	 *
-	 * @param channelId     Channel ID.
-	 * @param channelName   Channel name.
+	 * Sets the {@link VideoBlockerListener}.
 	 */
-	public static void blockChannel(String channelId, String channelName) {
-		try {
-			// if user is subscribed to the channel, then ask the user to unsubscribe first...
-			if (SubscriptionsDb.getSubscriptionsDb().isUserSubscribedToChannel(channelId)) {
-				Toast.makeText(SkyTubeApp.getContext(), R.string.channel_blockage_error_user_subscribed, Toast.LENGTH_LONG).show();
-			} else {
-				if (isChannelBlacklistEnabled()) {
-					blacklistChannel(channelId, channelName);
-				} else {
-					unwhitelistChannel(channelId);
-				}
-			}
-		} catch (IOException e) {
-			Logger.e(VideoBlocker.class, "Error occurred while blocking a channel", e);
-		}
+	public static void setVideoBlockerListener(VideoBlockerListener listener) {
+		videoBlockerListener = listener;
 	}
-
-
-	private static void blacklistChannel(String channelId, String channelName) {
-		boolean successBlockChannel = ChannelFilteringDb.getChannelFilteringDb().blacklist(channelId, channelName);
-
-		Toast.makeText(SkyTubeApp.getContext(),
-				successBlockChannel ? R.string.channel_blacklisted : R.string.channel_blacklist_error,
-				Toast.LENGTH_LONG).show();
-	}
-
-
-	private static void unwhitelistChannel(String channelId) {
-		boolean success = ChannelFilteringDb.getChannelFilteringDb().unwhitelist(channelId);
-
-		Toast.makeText(SkyTubeApp.getContext(),
-				success ? R.string.channel_unwhitelist_success : R.string.channel_unwhitelist_error,
-				Toast.LENGTH_LONG).show();
-	}
-
 
 
 	/**
@@ -112,7 +76,7 @@ public class VideoBlocker {
 	public List<YouTubeVideo> filter(List<YouTubeVideo> videosList) {
 		List<YouTubeVideo>  filteredVideosList    = new ArrayList<>();
 		final boolean       isChannelBlacklistEnabled = isChannelBlacklistEnabled();
-		final List<String>  blacklistedChannelIds = isChannelBlacklistEnabled ? ChannelFilteringDb.getChannelFilteringDb().getBlacklistedChannelIdsList() : null;
+		final List<String>  blacklistedChannelIds = isChannelBlacklistEnabled  ? ChannelFilteringDb.getChannelFilteringDb().getBlacklistedChannelsIdsList() : null;
 		final List<String>  whitelistedChannelIds = !isChannelBlacklistEnabled ? ChannelFilteringDb.getChannelFilteringDb().getWhitelistedChannelsIdsList() : null;
 		// set of user's preferred ISO 639 language codes (regex)
 		final Set<String>   preferredLanguages    = SkyTubeApp.getPreferenceManager().getStringSet(getStr(R.string.pref_key_preferred_languages), defaultPrefLanguages);
@@ -135,21 +99,51 @@ public class VideoBlocker {
 
 
 	/**
-	 * Log filtered videos.
+	 * Filter channels base on constraints set by the user.  Used by the SubsAdapter and hence the
+	 * user will not be informed if a channel has been hidden in the SubsAdapter.
+	 *
+	 * @param channels  Channels list to be filtered.
+	 *
+	 * @return A list of valid channels that fit the user's criteria.
+	 */
+	public List<YouTubeChannel> filterChannels(List<YouTubeChannel> channels) {
+		List<YouTubeChannel>    filteredChannels    = new ArrayList<>();
+		final boolean           isChannelBlacklistEnabled = isChannelBlacklistEnabled();
+		final List<String>      blacklistedChannelIds = isChannelBlacklistEnabled  ? ChannelFilteringDb.getChannelFilteringDb().getBlacklistedChannelsIdsList() : null;
+		final List<String>      whitelistedChannelIds = !isChannelBlacklistEnabled ? ChannelFilteringDb.getChannelFilteringDb().getWhitelistedChannelsIdsList() : null;
+
+		for (YouTubeChannel channel : channels) {
+			if ( !((isChannelBlacklistEnabled  &&  filterByBlacklistedChannels(channel, blacklistedChannelIds))
+					|| (!isChannelBlacklistEnabled  &&  filterByWhitelistedChannels(channel, whitelistedChannelIds))) ) {
+				filteredChannels.add(channel);
+			}
+		}
+
+		return filteredChannels;
+	}
+
+
+	/**
+	 * Log filtered videos and calls the VideoBlockerListener.
 	 *
 	 * @param video         Video being filtered.
 	 * @param filteringType Criteria (why being filtered - e.g. channel blocked).
 	 * @param reason        The criteria hit (e.g. ID of the channel blocked).
 	 */
 	private void log(YouTubeVideo video, FilterType filteringType, String reason) {
+		// log the filtering event
 		Logger.i(this, "\uD83D\uDED1 VIDEO='%s'  |  FILTER='%s'  |  REASON='%s'", video.getTitle(), filteringType, reason);
+
+		if (videoBlockerListener != null) {
+			videoBlockerListener.onVideoBlocked(new BlockedVideo(video, filteringType, reason));
+		}
 	}
 
 
 	/**
 	 * @return True if channel blacklisting is enabled;  false if channel whitelisting is enabled.
 	 */
-	private static boolean isChannelBlacklistEnabled() {
+	public static boolean isChannelBlacklistEnabled() {
 		final String channelFilter = SkyTubeApp.getPreferenceManager().getString(getStr(R.string.pref_key_channel_filter_method), getStr(R.string.channel_blacklisting_filtering));
 		return channelFilter.equals(getStr(R.string.channel_blacklisting_filtering));
 	}
@@ -164,7 +158,7 @@ public class VideoBlocker {
 	 * @return True if the video is to be filtered; false otherwise.
 	 */
 	private boolean filterByBlacklistedChannels(YouTubeVideo video, List<String> blacklistedChannelIds) {
-		if (blacklistedChannelIds.contains(video.getChannelId())) {
+		if (filterByBlacklistedChannels(video.getChannel(), blacklistedChannelIds)) {
 			log(video, FilterType.CHANNEL_BLACKLIST, video.getChannelName());
 			return true;
 		} else {
@@ -173,13 +167,47 @@ public class VideoBlocker {
 	}
 
 
+	/**
+	 * Filter the channel for blacklisted channels.
+	 *
+	 * @param channel               Channel to be checked.
+	 * @param blacklistedChannelIds Blacklisted channels IDs.
+	 *
+	 * @return True if the channel is to be filtered; false otherwise.
+	 */
+	private boolean filterByBlacklistedChannels(YouTubeChannel channel, List<String> blacklistedChannelIds) {
+		return blacklistedChannelIds.contains(channel.getId());
+	}
+
+
+	/**
+	 * Filter the video for whitelisted channels.
+	 *
+	 * @param video                 Video to be checked.
+	 * @param whitelistedChannelIds Whitelisted channels IDs.
+	 *
+	 * @return True if the video is to be filtered; false otherwise.
+	 */
 	private boolean filterByWhitelistedChannels(YouTubeVideo video, List<String> whitelistedChannelIds) {
-		if (whitelistedChannelIds.contains(video.getChannelId())) {
-			return false;
-		} else {
+		if (filterByWhitelistedChannels(video.getChannel(), whitelistedChannelIds)) {
 			log(video, FilterType.CHANNEL_WHITELIST, video.getChannelName());
 			return true;
+		} else {
+			return false;
 		}
+	}
+
+
+	/**
+	 * Filter the channel for whitelisted channels.
+	 *
+	 * @param channel               Channel to be checked.
+	 * @param whitelistedChannelIds Whitelisted channels IDs.
+	 *
+	 * @return True if the channel is to be filtered; false otherwise.
+	 */
+	private boolean filterByWhitelistedChannels(YouTubeChannel channel, List<String> whitelistedChannelIds) {
+		return !whitelistedChannelIds.contains(channel.getId());
 	}
 
 
@@ -303,7 +331,7 @@ public class VideoBlocker {
 	private boolean filterByViews(YouTubeVideo video, BigInteger minimumVideoViews) {
 		// if the user has not enabled the view filtering (i.e. it is set as -1), then do not filter
 		// this video
-		if (minimumVideoViews.signum() < 0)
+		if (minimumVideoViews.signum() < 0  ||  video.getViewsCountInt() == null)
 			return false;
 
 		// if the video has less views than minimumVideoViews, then filter it out
@@ -364,13 +392,83 @@ public class VideoBlocker {
 	/**
 	 * The type of video filtering.
 	 */
-	public enum FilterType {
+	public enum FilterType implements Serializable {
 		CHANNEL_BLACKLIST,
 		CHANNEL_WHITELIST,
 		LANGUAGE,
 		LANGUAGE_DETECTION,
 		VIEWS,
-		DISLIKES,
+		DISLIKES;
+
+		@Override
+		public String toString() {
+			// Full emoji support was introduced in Android 7.0.
+			// Refer to:  https://www.android.com/versions/nougat-7-0/
+			final boolean emojisSupported = (android.os.Build.VERSION.SDK_INT >= 24);
+
+			switch (this) {
+				case CHANNEL_BLACKLIST:
+					return emojisSupported ? "⚫" : "B";
+				case CHANNEL_WHITELIST:
+					return emojisSupported ? "⚪" : "W";
+				case LANGUAGE:
+					return emojisSupported ? "\uD83D\uDDE3️" : "L";
+				case LANGUAGE_DETECTION:
+					return emojisSupported ? "\uD83D\uDD0D" : "LD";
+				case VIEWS:
+					return emojisSupported ? "\uD83D\uDC41️" : "V";
+				case DISLIKES:
+					return emojisSupported ? "\uD83D\uDC4E" : "D";
+			}
+
+			return super.toString();
+		}
+	}
+
+
+	/**
+	 * Represents a blocked YouTube video.
+	 */
+	public static class BlockedVideo implements Serializable {
+
+		private YouTubeVideo    video;
+		private FilterType      filteringType;
+		private String          reason;
+
+
+		BlockedVideo(YouTubeVideo video, FilterType filteringType, String reason) {
+			this.video = video;
+			this.filteringType = filteringType;
+			this.reason = reason;
+		}
+
+		public YouTubeVideo getVideo() {
+			return video;
+		}
+
+		public FilterType getFilteringType() {
+			return filteringType;
+		}
+
+		public String getReason() {
+			return reason;
+		}
+
+	}
+
+
+	/**
+	 * {@link VideoBlocker} listener.
+	 */
+	public interface VideoBlockerListener {
+
+		/**
+		 * Will be called once a video is blocked by {@link VideoBlocker}.
+		 *
+		 * @param video The video that has been blocked.
+		 */
+		void onVideoBlocked(BlockedVideo video);
+
 	}
 
 

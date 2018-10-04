@@ -11,9 +11,9 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.preference.PreferenceManager;
+import android.support.annotation.NonNull;
 import android.support.v7.app.AlertDialog;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -29,6 +29,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.VideoView;
 
+import com.afollestad.materialdialogs.DialogAction;
+import com.afollestad.materialdialogs.MaterialDialog;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.RequestOptions;
 
@@ -44,7 +46,6 @@ import free.rm.skytube.businessobjects.YouTube.POJOs.YouTubeChannelInterface;
 import free.rm.skytube.businessobjects.YouTube.POJOs.YouTubeVideo;
 import free.rm.skytube.businessobjects.YouTube.Tasks.GetVideoDescriptionTask;
 import free.rm.skytube.businessobjects.YouTube.Tasks.GetYouTubeChannelInfoTask;
-import free.rm.skytube.businessobjects.YouTube.VideoBlocker;
 import free.rm.skytube.businessobjects.YouTube.VideoStream.StreamMetaData;
 import free.rm.skytube.businessobjects.db.DownloadedVideosDb;
 import free.rm.skytube.businessobjects.db.PlaybackStatusDb;
@@ -54,9 +55,12 @@ import free.rm.skytube.businessobjects.interfaces.GetDesiredStreamListener;
 import free.rm.skytube.businessobjects.interfaces.YouTubePlayerFragmentInterface;
 import free.rm.skytube.gui.activities.MainActivity;
 import free.rm.skytube.gui.activities.ThumbnailViewerActivity;
+import free.rm.skytube.gui.businessobjects.ResumeVideoTask;
+import free.rm.skytube.gui.businessobjects.views.ClickableLinksTextView;
 import free.rm.skytube.gui.businessobjects.MediaControllerEx;
 import free.rm.skytube.gui.businessobjects.OnSwipeTouchListener;
-import free.rm.skytube.gui.businessobjects.SubscribeButton;
+import free.rm.skytube.gui.businessobjects.SkyTubeMaterialDialog;
+import free.rm.skytube.gui.businessobjects.views.SubscribeButton;
 import free.rm.skytube.gui.businessobjects.YouTubeVideoListener;
 import free.rm.skytube.gui.businessobjects.adapters.CommentsAdapter;
 import free.rm.skytube.gui.businessobjects.fragments.ImmersiveModeFragment;
@@ -70,48 +74,48 @@ public class YouTubePlayerFragment extends ImmersiveModeFragment implements Medi
 
 	public static final String YOUTUBE_VIDEO_OBJ = "YouTubePlayerFragment.yt_video_obj";
 
-	private YouTubeVideo		youTubeVideo = null;
-	private YouTubeChannel		youTubeChannel = null;
+	private YouTubeVideo		    youTubeVideo = null;
+	private YouTubeChannel		    youTubeChannel = null;
 
-	private VideoView			videoView = null;
+	private VideoView			    videoView = null;
 	/** The current video position (i.e. play time). */
-	private int					videoCurrentPosition = 0;
-	private MediaControllerEx	mediaController = null;
+	private int					    videoCurrentPosition = 0;
+	private MediaControllerEx	    mediaController = null;
 
-	private TextView			videoDescTitleTextView = null;
-	private ImageView			videoDescChannelThumbnailImageView = null;
-	private TextView			videoDescChannelTextView = null;
-	private SubscribeButton		videoDescSubscribeButton = null;
-	private TextView			videoDescViewsTextView = null;
-	private ProgressBar			videoDescLikesBar = null;
-	private TextView			videoDescLikesTextView = null;
-	private TextView			videoDescDislikesTextView = null;
-	private View                videoDescRatingsDisabledTextView = null;
-	private TextView			videoDescPublishDateTextView = null;
-	private TextView			videoDescriptionTextView = null;
-	private RelativeLayout      voidView = null;
-	private ImageView           indicatorImageView = null;
-	private TextView            indicatorTextView = null;
-	private RelativeLayout      indicatorView = null;
-	private View				loadingVideoView = null;
+	private TextView			    videoDescTitleTextView = null;
+	private ImageView			    videoDescChannelThumbnailImageView = null;
+	private TextView			    videoDescChannelTextView = null;
+	private SubscribeButton		    videoDescSubscribeButton = null;
+	private TextView			    videoDescViewsTextView = null;
+	private ProgressBar			    videoDescLikesBar = null;
+	private TextView			    videoDescLikesTextView = null;
+	private TextView			    videoDescDislikesTextView = null;
+	private View                    videoDescRatingsDisabledTextView = null;
+	private TextView			    videoDescPublishDateTextView = null;
+	private ClickableLinksTextView  videoDescriptionTextView = null;
+	private RelativeLayout          voidView = null;
+	private ImageView               indicatorImageView = null;
+	private TextView                indicatorTextView = null;
+	private RelativeLayout          indicatorView = null;
+	private View				    loadingVideoView = null;
 
-	private SlidingDrawer		videoDescriptionDrawer = null;
-	private View                videoDescriptionDrawerIconView = null;
-	private SlidingDrawer		commentsDrawer = null;
-	private View                commentsDrawerIconView = null;
-	private View				commentsProgressBar = null,
-								noVideoCommentsView = null;
-	private CommentsAdapter		commentsAdapter = null;
-	private ExpandableListView	commentsExpandableListView = null;
+	private SlidingDrawer		    videoDescriptionDrawer = null;
+	private View                    videoDescriptionDrawerIconView = null;
+	private SlidingDrawer		    commentsDrawer = null;
+	private View                    commentsDrawerIconView = null;
+	private View				    commentsProgressBar = null,
+									noVideoCommentsView = null;
+	private CommentsAdapter		    commentsAdapter = null;
+	private ExpandableListView	    commentsExpandableListView = null;
 
-	private Menu                menu = null;
+	private Menu                    menu = null;
 
-	private Handler             hideHudTimerHandler = null;
-	private Handler             hideVideoDescAndCommentsIconsTimerHandler = null;
+	private Handler                 hideHudTimerHandler = null;
+	private Handler                 hideVideoDescAndCommentsIconsTimerHandler = null;
 
-	private float               startBrightness = -1.0f;
-	private float               startVolumePercent  = -1.0f;
-	private int                 startVideoTime = -1;
+	private float                   startBrightness = -1.0f;
+	private float                   startVolumePercent  = -1.0f;
+	private int                     startVideoTime = -1;
 
 	/** Timeout (in milliseconds) before the HUD (i.e. media controller + action/title bar) is hidden. */
 	private static final int HUD_VISIBILITY_TIMEOUT = 5000;
@@ -120,7 +124,6 @@ public class YouTubePlayerFragment extends ImmersiveModeFragment implements Medi
 	private static final int NAVBAR_VISIBILITY_TIMEOUT = 500;
 	private static final String VIDEO_CURRENT_POSITION = "YouTubePlayerFragment.VideoCurrentPosition";
 	private static final String TAG = YouTubePlayerFragment.class.getSimpleName();
-	private static final String TUTORIAL_COMPLETED = "YouTubePlayerFragment.TutorialCompleted";
 
 	private static final int MAX_VIDEO_STEP_TIME = 60 * 1000;
 	private static final int MAX_BRIGHTNESS = 100;
@@ -128,10 +131,8 @@ public class YouTubePlayerFragment extends ImmersiveModeFragment implements Medi
 
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-		// if immersive mode is enabled then hide the navigation bar
-		if (userWantsImmersiveMode()) {
-			hideNavigationBar();
-		}
+		// hide the navigation bar
+		hideNavigationBar();
 
 		// inflate the layout for this fragment
 		View view = inflater.inflate(R.layout.fragment_youtube_player, container, false);
@@ -196,11 +197,9 @@ public class YouTubePlayerFragment extends ImmersiveModeFragment implements Medi
 
 		// setup the media controller (will control the video playing/pausing)
 		mediaController = new MediaControllerEx(getActivity(), videoView, this);
-		// ensure that the mediaController is always above the NavBar (given that the NavBar can
-		// be in immersive mode)
-		if (userWantsImmersiveMode()) {
-			mediaController.setPadding(0, 0, 0, getNavBarHeightInPixels());
-		}
+		// ensure that the mediaController is always above the NavBar (given that the NavBar can be
+		// in immersive mode)
+		mediaController.setPadding(0, 0, 0, getNavBarHeightInPixels());
 
 		voidView = view.findViewById(R.id.void_view);
 		indicatorView = view.findViewById(R.id.indicatorView);
@@ -208,6 +207,9 @@ public class YouTubePlayerFragment extends ImmersiveModeFragment implements Medi
 		indicatorTextView = view.findViewById(R.id.indicatorTextView);
 		// detect if user's swipes motions and taps...
 		voidView.setOnTouchListener(new OnSwipeTouchListener(getActivity()) {
+
+			/** Enable/Disable video gestures based on user preferences. */
+			private final boolean disableGestures = SkyTubeApp.getPreferenceManager().getBoolean(SkyTubeApp.getStr(R.string.pref_key_disable_screen_gestures), false);
 
 			@Override
 			public boolean onSwipeLeft() {
@@ -247,6 +249,10 @@ public class YouTubePlayerFragment extends ImmersiveModeFragment implements Medi
 
 			@Override
 			public void adjustBrightness(double adjustPercent) {
+				if (disableGestures) {
+					return;
+				}
+
 				// We are setting brightness percent to a value that should be from -1.0 to 1.0. We need to limit it here for these values first
 				if (adjustPercent < -1.0f) {
 					adjustPercent = -1.0f;
@@ -277,6 +283,10 @@ public class YouTubePlayerFragment extends ImmersiveModeFragment implements Medi
 
 			@Override
 			public void adjustVolumeLevel(double adjustPercent) {
+				if (disableGestures) {
+					return;
+				}
+
 				// We are setting volume percent to a value that should be from -1.0 to 1.0. We need to limit it here for these values first
 				if (adjustPercent < -1.0f) {
 					adjustPercent = -1.0f;
@@ -324,6 +334,10 @@ public class YouTubePlayerFragment extends ImmersiveModeFragment implements Medi
 
 			@Override
 			public void adjustVideoPosition(double adjustPercent, boolean forwardDirection) {
+				if (disableGestures) {
+					return;
+				}
+
 				if (adjustPercent < -1.0f) {
 					adjustPercent = -1.0f;
 				} else if (adjustPercent > 1.0f) {
@@ -463,61 +477,24 @@ public class YouTubePlayerFragment extends ImmersiveModeFragment implements Medi
 			videoDescRatingsDisabledTextView.setVisibility(View.VISIBLE);
 		}
 
-		// If Playback Status is not disabled and this video is in progress, ask the user if they would like to resume.
-		if(!SkyTubeApp.getPreferenceManager().getBoolean(getString(R.string.pref_key_disable_playback_status), false) && PlaybackStatusDb.getVideoDownloadsDb().getVideoWatchedStatus(youTubeVideo).position > 0) {
-			new AlertDialog.Builder(getActivity())
-							.setTitle(R.string.should_resume)
-							.setPositiveButton(R.string.yes, new DialogInterface.OnClickListener() {
-								@Override
-								public void onClick(DialogInterface dialog, int which) {
-									videoCurrentPosition = (int)PlaybackStatusDb.getVideoDownloadsDb().getVideoWatchedStatus(youTubeVideo).position;
-									loadVideo();
-								}
-							})
-							.setNegativeButton(R.string.no, new DialogInterface.OnClickListener() {
-								@Override
-								public void onClick(DialogInterface dialogInterface, int i) {
-									loadVideo();
-								}
-							})
-							.show();
-		} else {
-			loadVideo();
-		}
+		new ResumeVideoTask(getContext(), youTubeVideo, new ResumeVideoTask.Callback() {
+			@Override
+			public void loadVideo(int position) {
+				videoCurrentPosition = position;
+				YouTubePlayerFragment.this.loadVideo();
+			}
+		}).ask();
 	}
-
 
 
 	@Override
 	public void onPrepared(MediaPlayer mediaPlayer) {
 		loadingVideoView.setVisibility(View.GONE);
 		videoView.seekTo(videoCurrentPosition);
+		videoView.start();
 
-		// was the video player tutorial displayed before?
-		if (wasTutorialDisplayedBefore()) {
-			videoView.start();
-		} else {
-			// display the tutorial dialog boxes, then play the video
-			displayTutorialDialog(R.string.tutorial_comments_icon, Gravity.TOP | Gravity.RIGHT, new DialogInterface.OnClickListener() {
-				@Override
-				public void onClick(DialogInterface dialog, int which) {
-					displayTutorialDialog(R.string.tutorial_video_info_icon, Gravity.BOTTOM | Gravity.LEFT, new DialogInterface.OnClickListener() {
-						@Override
-						public void onClick(DialogInterface dialog, int which) {
-							displayTutorialDialog(R.string.tutorial_pause_video, Gravity.CENTER, new DialogInterface.OnClickListener() {
-								@Override
-								public void onClick(DialogInterface dialog, int which) {
-									videoView.start();
-								}
-							});
-						}
-					});
-				}
-			});
-		}
 		showHud();
 	}
-
 
 
 	@Override
@@ -530,12 +507,14 @@ public class YouTubePlayerFragment extends ImmersiveModeFragment implements Medi
 		super.onPause();
 	}
 
+
 	@Override
 	public void onResume() {
 		super.onResume();
 
 		setupUserPrefs();
 	}
+
 
 	// We can also add volume level or something in the future.
 	private void setupUserPrefs() {
@@ -623,24 +602,19 @@ public class YouTubePlayerFragment extends ImmersiveModeFragment implements Medi
 			getSupportActionBar().hide();
 			mediaController.hideController();
 
-			// if the user wants the IMMERSIVE mode experience...
-			if (userWantsImmersiveMode()) {
-				// Hide the navigation bar.  Due to Android pre-defined mechanisms, the nav bar can
-				// only be hidden after all animation have been rendered (e.g. mediaController is
-				// fully closed).  As a result, a delay is needed in order to explicitly hide the
-				// nav bar.
-				hideVideoDescAndCommentsIconsTimerHandler = new Handler();
-				hideVideoDescAndCommentsIconsTimerHandler.postDelayed(new Runnable() {
-					@Override
-					public void run() {
-						hideNavigationBar();
-						hideVideoDescAndCommentsIconsTimerHandler = null;
-					}
-				}, NAVBAR_VISIBILITY_TIMEOUT);
-			} else {
-				videoDescriptionDrawerIconView.setVisibility(View.VISIBLE);
-				commentsDrawerIconView.setVisibility(View.VISIBLE);
-			}
+			// Due to the IMMERSIVE mode experience (i.e. comments/desc icons are hidden by default):
+			// Hide the navigation bar.  Due to Android pre-defined mechanisms, the nav bar can
+			// only be hidden after all animation have been rendered (e.g. mediaController is
+			// fully closed).  As a result, a delay is needed in order to explicitly hide the
+			// nav bar.
+			hideVideoDescAndCommentsIconsTimerHandler = new Handler();
+			hideVideoDescAndCommentsIconsTimerHandler.postDelayed(new Runnable() {
+				@Override
+				public void run() {
+					hideNavigationBar();
+					hideVideoDescAndCommentsIconsTimerHandler = null;
+				}
+			}, NAVBAR_VISIBILITY_TIMEOUT);
 
 			// If there is a hideHudTimerHandler running, then cancel it (stop if from running).  This way,
 			// if the HUD was hidden on the 5th second, and the user reopens the HUD, this code will
@@ -712,7 +686,7 @@ public class YouTubePlayerFragment extends ImmersiveModeFragment implements Medi
 				return true;
 
 			case R.id.menu_open_video_with:
-				playVideoExternally();
+				youTubeVideo.playVideoExternally(getContext());
 				videoView.pause();
 				return true;
 
@@ -743,22 +717,12 @@ public class YouTubePlayerFragment extends ImmersiveModeFragment implements Medi
 				return true;
 
             case R.id.block_channel:
-	            VideoBlocker.blockChannel(youTubeChannel.getId(), youTubeChannel.getTitle());
+	            youTubeChannel.blockChannel();
 
 			default:
 				return super.onOptionsItemSelected(item);
 		}
 	}
-
-
-	/**
-	 * Play the video using an external app
-	 */
-	private void playVideoExternally() {
-		Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(youTubeVideo.getVideoUrl()));
-		startActivity(browserIntent);
-	}
-
 
 	/**
 	 * Loads the video specified in {@link #youTubeVideo}.
@@ -780,7 +744,7 @@ public class YouTubePlayerFragment extends ImmersiveModeFragment implements Medi
 									Toast.LENGTH_LONG).show();
 					loadVideo();
 				} else {
-					Logger.i(YouTubePlayerFragment.this, ">> PLAYING LOCALLY: %s", youTubeVideo);
+					Logger.i(YouTubePlayerFragment.this, ">> PLAYING LOCALLY: %s", uri);
 					videoView.setVideoURI(uri);
 				}
 			} else {
@@ -815,8 +779,7 @@ public class YouTubePlayerFragment extends ImmersiveModeFragment implements Medi
 			new GetVideoDescriptionTask(youTubeVideo, new GetVideoDescriptionTask.GetVideoDescriptionTaskListener() {
 				@Override
 				public void onFinished(String description) {
-					videoDescriptionTextView.setText(description);
-					SkyTubeApp.interceptYouTubeLinks(getActivity(), videoDescriptionTextView);
+					videoDescriptionTextView.setTextAndLinkify(description);
 				}
 			}).executeInParallel();
 		} else {
@@ -833,54 +796,11 @@ public class YouTubePlayerFragment extends ImmersiveModeFragment implements Medi
 							.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
 								@Override
 								public void onClick(DialogInterface dialog, int which) {
-									playVideoExternally();
+									youTubeVideo.playVideoExternally(getContext());
 									closeActivity();
 								}
 							})
 							.show();
-		}
-	}
-
-	/**
-	 * Will check whether the video player tutorial was completed before.  If no, it will return
-	 * false and will save the value accordingly.
-	 *
-	 * @return True if the tutorial was completed in the past.
-	 */
-	private boolean wasTutorialDisplayedBefore() {
-		SharedPreferences preferences = SkyTubeApp.getPreferenceManager();
-		boolean wasTutorialDisplayedBefore = preferences.getBoolean(TUTORIAL_COMPLETED, false);
-
-		preferences.edit().putBoolean(TUTORIAL_COMPLETED, true).commit();
-
-		return wasTutorialDisplayedBefore;
-	}
-
-
-	/**
-	 * Display a tutorial dialog.
-	 *
-	 * @param messageResId          Message resource ID.
-	 * @param dialogGravityFlags    Gravity flags, e.g. Gravity.RIGHT.
-	 * @param onClickListener       onClickListener which will be called once the user taps on OK
-	 *                              button.
-	 */
-	private void displayTutorialDialog(int messageResId, int dialogGravityFlags, DialogInterface.OnClickListener onClickListener) {
-		AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
-		builder.setMessage(messageResId);
-		builder.setPositiveButton(R.string.ok, onClickListener);
-
-		AlertDialog dialog = builder.create();
-		WindowManager.LayoutParams wmlp = dialog.getWindow().getAttributes();
-
-		if (wmlp != null) {
-			if (dialogGravityFlags != Gravity.CENTER) {
-				wmlp.gravity = dialogGravityFlags;
-				wmlp.x = 50;   // x position
-				wmlp.y = 50;   // y position
-			}
-
-			dialog.show();
 		}
 	}
 

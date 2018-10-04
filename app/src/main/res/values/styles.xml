@@ -32,7 +32,10 @@
 		<item name="md_positive_color">@android:color/white</item>
 		<item name="md_neutral_color">@android:color/white</item>
 		<item name="md_negative_color">@android:color/white</item>
+	</style>
 
+	<style name="BlockedVideoTextView" parent="AppTheme">
+		<item name="android:padding">7dp</item>
 	</style>
 
 
@@ -161,6 +164,38 @@
 		<item name="android:textColor">#FFBEBEBE</item>
 		<item name="android:textAppearance">@style/TextAppearance.AppCompat.Small</item>
 		<item name="android:textStyle">bold</item>
+	</style>
+
+
+
+	<!-- *************************************************************************************** -->
+	<!--
+	 	Video Player Tutorial
+	-->
+
+	<style name="HandGestureImageView" parent="AppTheme">
+		<item name="android:layout_width">@dimen/tutorial_hand_gesture_image_width</item>
+		<item name="android:layout_height">wrap_content</item>
+		<item name="android:scaleType">fitXY</item>
+		<item name="android:adjustViewBounds">true</item>
+		<item name="android:layout_marginBottom">8dp</item>
+		<item name="android:layout_marginEnd">8dp</item>
+		<item name="android:layout_marginLeft">8dp</item>
+		<item name="android:layout_marginRight">8dp</item>
+		<item name="android:layout_marginStart">8dp</item>
+	</style>
+
+	<style name="TutorialTextView" parent="@style/TextAppearance.AppCompat.Medium.Inverse">
+		<item name="android:layout_width">0dp</item>
+		<item name="android:layout_height">wrap_content</item>
+		<item name="android:padding">8dp</item>
+		<item name="android:gravity">center_horizontal</item>
+		<item name="android:text">Tutorial text goes here.</item>
+		<item name="android:layout_marginBottom">8dp</item>
+		<item name="android:layout_marginEnd">8dp</item>
+		<item name="android:layout_marginLeft">8dp</item>
+		<item name="android:layout_marginRight">8dp</item>
+		<item name="android:layout_marginStart">8dp</item>
 	</style>
 
 

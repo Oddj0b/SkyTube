@@ -35,9 +35,8 @@ import com.bumptech.glide.request.RequestOptions;
 import free.rm.skytube.R;
 import free.rm.skytube.app.SkyTubeApp;
 import free.rm.skytube.businessobjects.YouTube.POJOs.YouTubeVideo;
-import free.rm.skytube.businessobjects.YouTube.VideoBlocker;
-import free.rm.skytube.businessobjects.db.Tasks.IsVideoBookmarkedTask;
 import free.rm.skytube.businessobjects.db.PlaybackStatusDb;
+import free.rm.skytube.businessobjects.db.Tasks.IsVideoBookmarkedTask;
 import free.rm.skytube.businessobjects.db.Tasks.IsVideoWatchedTask;
 import free.rm.skytube.gui.activities.ThumbnailViewerActivity;
 import free.rm.skytube.gui.businessobjects.MainActivityListener;
@@ -163,18 +162,16 @@ class GridViewHolder extends RecyclerView.ViewHolder {
 			videoPositionProgressBar.setVisibility(View.INVISIBLE);
 		} else {
 			PlaybackStatusDb.VideoWatchedStatus videoWatchedStatus = PlaybackStatusDb.getVideoDownloadsDb().getVideoWatchedStatus(youTubeVideo);
-			if (videoWatchedStatus.position > 0) {
+			if (videoWatchedStatus.isWatched()) {
 				videoPositionProgressBar.setVisibility(View.VISIBLE);
 				videoPositionProgressBar.setMax(youTubeVideo.getDurationInSeconds() * 1000);
-				videoPositionProgressBar.setProgress((int) videoWatchedStatus.position);
+				if (videoWatchedStatus.isFullyWatched()) {
+					videoPositionProgressBar.setProgress(youTubeVideo.getDurationInSeconds() * 1000);
+				} else {
+					videoPositionProgressBar.setProgress((int) videoWatchedStatus.getPosition());
+				}
 			} else {
 				videoPositionProgressBar.setVisibility(View.INVISIBLE);
-			}
-
-			if (videoWatchedStatus.watched) {
-				videoPositionProgressBar.setVisibility(View.VISIBLE);
-				videoPositionProgressBar.setMax(youTubeVideo.getDurationInSeconds() * 1000);
-				videoPositionProgressBar.setProgress(youTubeVideo.getDurationInSeconds() * 1000);
 			}
 		}
 	}
@@ -211,8 +208,7 @@ class GridViewHolder extends RecyclerView.ViewHolder {
 			public boolean onMenuItemClick(MenuItem item) {
 				switch(item.getItemId()) {
 					case R.id.menu_open_video_with:
-						Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(youTubeVideo.getVideoUrl()));
-						context.startActivity(browserIntent);
+						youTubeVideo.playVideoExternally(context);
 						return true;
 					case R.id.share:
 						youTubeVideo.shareVideo(view.getContext());
@@ -246,7 +242,7 @@ class GridViewHolder extends RecyclerView.ViewHolder {
 						youTubeVideo.downloadVideo(context);
 						return true;
 					case R.id.block_channel:
-						VideoBlocker.blockChannel(youTubeVideo.getChannelId(), youTubeVideo.getChannelName());
+						youTubeVideo.getChannel().blockChannel();
 				}
 				return false;
 			}

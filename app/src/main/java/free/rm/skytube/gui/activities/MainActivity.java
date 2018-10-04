@@ -23,18 +23,27 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.Cursor;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentTransaction;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.SearchView;
 import android.view.Menu;
-import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+
+import com.mikepenz.actionitembadge.library.ActionItemBadge;
+import com.mikepenz.actionitembadge.library.utils.BadgeStyle;
+
+import org.jetbrains.annotations.NotNull;
+
+import java.io.Serializable;
+import java.util.ArrayList;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -42,10 +51,12 @@ import free.rm.skytube.R;
 import free.rm.skytube.app.SkyTubeApp;
 import free.rm.skytube.businessobjects.YouTube.POJOs.YouTubeChannel;
 import free.rm.skytube.businessobjects.YouTube.POJOs.YouTubePlaylist;
+import free.rm.skytube.businessobjects.YouTube.VideoBlocker;
 import free.rm.skytube.businessobjects.db.DownloadedVideosDb;
 import free.rm.skytube.businessobjects.db.SearchHistoryDb;
 import free.rm.skytube.businessobjects.db.SearchHistoryTable;
 import free.rm.skytube.businessobjects.interfaces.SearchHistoryClickListener;
+import free.rm.skytube.gui.businessobjects.BlockedVideosDialog;
 import free.rm.skytube.gui.businessobjects.MainActivityListener;
 import free.rm.skytube.gui.businessobjects.YouTubePlayer;
 import free.rm.skytube.gui.businessobjects.adapters.SearchHistoryCursorAdapter;
@@ -61,13 +72,14 @@ import free.rm.skytube.gui.fragments.SearchVideoGridFragment;
 public class MainActivity extends AppCompatActivity implements MainActivityListener {
 
 	@BindView(R.id.fragment_container)
-	protected FrameLayout fragmentContainer;
+	protected FrameLayout           fragmentContainer;
 
-	private MainFragment mainFragment;
+	private MainFragment            mainFragment;
 	private SearchVideoGridFragment searchVideoGridFragment;
-	private ChannelBrowserFragment channelBrowserFragment;
+	private ChannelBrowserFragment  channelBrowserFragment;
 	/** Fragment that shows Videos from a specific Playlist */
-	private PlaylistVideosFragment playlistVideosFragment;
+	private PlaylistVideosFragment  playlistVideosFragment;
+	private VideoBlockerPlugin      videoBlockerPlugin;
 
 	private boolean dontAddToBackStack = false;
 
@@ -79,9 +91,9 @@ public class MainActivity extends AppCompatActivity implements MainActivityListe
 	public static final String ACTION_VIEW_PLAYLIST = "MainActivity.ViewPlaylist";
 	private static final String MAIN_FRAGMENT   = "MainActivity.MainFragment";
 	private static final String SEARCH_FRAGMENT = "MainActivity.SearchFragment";
-	public static final String CHANNEL_BROWSER_FRAGMENT = "MainActivity.ChannelBrowserFragment";
-	public static final String PLAYLIST_VIDEOS_FRAGMENT = "MainActivity.PlaylistVideosFragment";
-
+	private static final String CHANNEL_BROWSER_FRAGMENT = "MainActivity.ChannelBrowserFragment";
+	private static final String PLAYLIST_VIDEOS_FRAGMENT = "MainActivity.PlaylistVideosFragment";
+	private static final String VIDEO_BLOCKER_PLUGIN = "MainActivity.VideoBlockerPlugin";
 
 
 	@Override
@@ -107,7 +119,6 @@ public class MainActivity extends AppCompatActivity implements MainActivityListe
 				searchVideoGridFragment = (SearchVideoGridFragment) getSupportFragmentManager().getFragment(savedInstanceState, SEARCH_FRAGMENT);
 				channelBrowserFragment = (ChannelBrowserFragment) getSupportFragmentManager().getFragment(savedInstanceState, CHANNEL_BROWSER_FRAGMENT);
 				playlistVideosFragment = (PlaylistVideosFragment) getSupportFragmentManager().getFragment(savedInstanceState, PLAYLIST_VIDEOS_FRAGMENT);
-
 			}
 
 			// If this Activity was called to view a particular channel, display that channel via ChannelBrowserFragment, instead of MainFragment
@@ -134,11 +145,21 @@ public class MainActivity extends AppCompatActivity implements MainActivityListe
 				}
 			}
 		}
+
+		if (savedInstanceState != null) {
+			// restore the video blocker plugin
+			this.videoBlockerPlugin = (VideoBlockerPlugin) savedInstanceState.getSerializable(VIDEO_BLOCKER_PLUGIN);
+			this.videoBlockerPlugin.setActivity(this);
+		} else {
+			this.videoBlockerPlugin = new VideoBlockerPlugin(this);
+		}
 	}
 
 
 	@Override
 	protected void onSaveInstanceState(Bundle outState) {
+		super.onSaveInstanceState(outState);
+
 		if(mainFragment != null)
 			getSupportFragmentManager().putFragment(outState, MAIN_FRAGMENT, mainFragment);
 		if(searchVideoGridFragment != null && searchVideoGridFragment.isVisible())
@@ -147,7 +168,9 @@ public class MainActivity extends AppCompatActivity implements MainActivityListe
 			getSupportFragmentManager().putFragment(outState, CHANNEL_BROWSER_FRAGMENT, channelBrowserFragment);
 		if(playlistVideosFragment != null && playlistVideosFragment.isVisible())
 			getSupportFragmentManager().putFragment(outState, PLAYLIST_VIDEOS_FRAGMENT, playlistVideosFragment);
-		super.onSaveInstanceState(outState);
+
+		// save the video blocker plugin
+		outState.putSerializable(VIDEO_BLOCKER_PLUGIN, videoBlockerPlugin);
 	}
 
 
@@ -164,8 +187,10 @@ public class MainActivity extends AppCompatActivity implements MainActivityListe
 
 	@Override
 	public boolean onCreateOptionsMenu(final Menu menu) {
-		MenuInflater inflater = getMenuInflater();
-		inflater.inflate(R.menu.main_activity_menu, menu);
+		getMenuInflater().inflate(R.menu.main_activity_menu, menu);
+
+		// setup the video blocker notification icon which will be displayed in the tool bar
+		videoBlockerPlugin.setupIconForToolBar(menu);
 
 		// setup the SearchView (actionbar)
 		final MenuItem searchItem = menu.findItem(R.id.menu_search);
@@ -197,7 +222,7 @@ public class MainActivity extends AppCompatActivity implements MainActivityListe
 					searchHistoryCursorAdapter.setSearchHistoryClickListener(new SearchHistoryClickListener() {
 						@Override
 						public void onClick(String query) {
-							displaySearchResults(query);
+							displaySearchResults(query, searchView);
 						}
 					});
 					searchView.setSuggestionsAdapter(searchHistoryCursorAdapter);
@@ -206,20 +231,20 @@ public class MainActivity extends AppCompatActivity implements MainActivityListe
 					searchHistoryCursorAdapter.changeCursor(cursor);
 				}
 
+				// update the current search string
+				searchHistoryCursorAdapter.setSearchBarString(newText);
+
 				return true;
 			}
 
 			@Override
 			public boolean onQueryTextSubmit(String query) {
-				// hide the keyboard
-				searchView.clearFocus();
-
 				if(!SkyTubeApp.getPreferenceManager().getBoolean(SkyTubeApp.getStr(R.string.pref_key_disable_search_history), false)) {
 					// Save this search string into the Search History Database (for Suggestions)
 					SearchHistoryDb.getSearchHistoryDb().insertSearchText(query);
 				}
 
-				displaySearchResults(query);
+				displaySearchResults(query, searchView);
 
 				return true;
 			}
@@ -232,6 +257,9 @@ public class MainActivity extends AppCompatActivity implements MainActivityListe
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
 		switch (item.getItemId()) {
+			case R.id.menu_blocker:
+				videoBlockerPlugin.onMenuBlockerIconClicked();
+				return true;
 			case R.id.menu_preferences:
 				Intent i = new Intent(this, PreferencesActivity.class);
 				startActivity(i);
@@ -249,10 +277,12 @@ public class MainActivity extends AppCompatActivity implements MainActivityListe
 		return super.onOptionsItemSelected(item);
 	}
 
+
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		super.onActivityResult(requestCode, resultCode, data);
 	}
+
 
 	/**
 	 * Display the Enter Video URL dialog.
@@ -342,13 +372,13 @@ public class MainActivity extends AppCompatActivity implements MainActivityListe
 	}
 
 
-
 	@Override
 	public void onChannelClick(YouTubeChannel channel) {
 		Bundle args = new Bundle();
 		args.putSerializable(ChannelBrowserFragment.CHANNEL_OBJ, channel);
 		switchToChannelBrowserFragment(args);
 	}
+
 
 	@Override
 	public void onChannelClick(String channelId) {
@@ -357,12 +387,14 @@ public class MainActivity extends AppCompatActivity implements MainActivityListe
 		switchToChannelBrowserFragment(args);
 	}
 
+
 	private void switchToChannelBrowserFragment(Bundle args) {
 		channelBrowserFragment = new ChannelBrowserFragment();
 		channelBrowserFragment.getChannelPlaylistsFragment().setMainActivityListener(this);
 		channelBrowserFragment.setArguments(args);
 		switchToFragment(channelBrowserFragment);
 	}
+
 
 	@Override
 	public void onPlaylistClick(YouTubePlaylist playlist) {
@@ -373,11 +405,17 @@ public class MainActivity extends AppCompatActivity implements MainActivityListe
 		switchToFragment(playlistVideosFragment);
 	}
 
+
 	/**
-	 * Switch to the Search Video Grid Fragment with the selected query to search for videos.
-	 * @param query
+	 * Hide the virtual keyboard and then switch to the Search Video Grid Fragment with the selected
+	 * query to search for videos.
+	 *
+	 * @param query Query text submitted by the user.
 	 */
-	private void displaySearchResults(String query) {
+	private void displaySearchResults(String query, @NotNull final View searchView) {
+		// hide the keyboard
+		searchView.clearFocus();
+
 		// open SearchVideoGridFragment and display the results
 		searchVideoGridFragment = new SearchVideoGridFragment();
 		Bundle bundle = new Bundle();
@@ -385,4 +423,88 @@ public class MainActivity extends AppCompatActivity implements MainActivityListe
 		searchVideoGridFragment.setArguments(bundle);
 		switchToFragment(searchVideoGridFragment);
 	}
+
+
+
+	//////////////////////////////////////////////////////////////////////////////////////////
+
+
+	/**
+	 * A module/"plugin"/icon that displays the total number of blocked videos.
+	 */
+	private static class VideoBlockerPlugin implements VideoBlocker.VideoBlockerListener,
+			BlockedVideosDialog.BlockedVideosDialogListener,
+			Serializable {
+
+		private ArrayList<VideoBlocker.BlockedVideo> blockedVideos = new ArrayList<>();
+		private transient AppCompatActivity activity = null;
+
+
+		VideoBlockerPlugin(AppCompatActivity activity) {
+			// notify this class whenever a video is blocked...
+			VideoBlocker.setVideoBlockerListener(this);
+			this.activity = activity;
+		}
+
+
+		public void setActivity(AppCompatActivity activity) {
+			this.activity = activity;
+		}
+
+
+		@Override
+		public void onVideoBlocked(VideoBlocker.BlockedVideo blockedVideo) {
+			blockedVideos.add(blockedVideo);
+			activity.invalidateOptionsMenu();
+		}
+
+
+		/**
+		 * Setup the video blocker notification icon which will be displayed in the tool bar.
+ 		 */
+		void setupIconForToolBar(final Menu menu) {
+			if (getTotalBlockedVideos() > 0) {
+				// display a red bubble containing the number of blocked videos
+				ActionItemBadge.update(activity,
+						menu.findItem(R.id.menu_blocker),
+						ContextCompat.getDrawable(activity, R.drawable.ic_video_blocker),
+						ActionItemBadge.BadgeStyles.RED,
+						getTotalBlockedVideos());
+			} else {
+				// Else, set the bubble to transparent.  This is required so that when the user
+				// clicks on the icon, the app will be able to detect such click and displays the
+				// BlockedVideosDialog (otherwise, the ActionItemBadge would just ignore such clicks.
+				ActionItemBadge.update(activity,
+						menu.findItem(R.id.menu_blocker),
+						ContextCompat.getDrawable(activity, R.drawable.ic_video_blocker),
+						new BadgeStyle(BadgeStyle.Style.DEFAULT, com.mikepenz.actionitembadge.library.R.layout.menu_action_item_badge, Color.TRANSPARENT, Color.TRANSPARENT, Color.WHITE),
+						"");
+			}
+		}
+
+
+		void onMenuBlockerIconClicked() {
+			new BlockedVideosDialog(activity, this, blockedVideos).show();
+		}
+
+
+		@Override
+		public void onClearBlockedVideos() {
+			blockedVideos.clear();
+			activity.invalidateOptionsMenu();
+		}
+
+
+		/**
+		 * @return Total number of blocked videos.
+		 */
+		private int getTotalBlockedVideos() {
+			return blockedVideos.size();
+		}
+
+	}
+
+
+
+
 }

@@ -24,7 +24,7 @@
 		<item>@string/pref_official_player_value</item>   <!-- this should remain the last item -->
 	</string-array>
 
-	<string name="pref_backup_category">Backups</string>
+	<string name="pref_import_export_category">Import/Export</string>
 	<string name="pref_title_backup_dbs">Backup Databases</string>
 	<string name="pref_key_backup_dbs" translatable="false">pref_key_backup_db</string>
 	<string name="pref_summary_backup_dbs">Backup your subscriptions and bookmarks databases.</string>
@@ -157,6 +157,7 @@
 		<item>ქართული</item>
 		<item>አማርኛ</item>
 		<item>ខ្មែរ</item>
+		<item>中文</item>
 		<item>中文 (简体)</item>
 		<item>中文 (繁體)</item>
 		<item>中文 (香港)</item>
@@ -179,7 +180,7 @@
 		<item>"en(?:-.+)?"</item>	<!-- "en" or "en-US" or "en-CA" ... -->
 		<item>en-GB</item>
 		<item>"en(?:-US)?"</item>	<!-- "en" or "en-US" -->
-		<item>es</item>
+		<item>es(?:-ES)?"</item>    <!-- Somehow YouTube uses both "es" and "es-ES" for Spanish -->
 		<item>es-419</item>
 		<item>es-US</item>
 		<item>eu</item>
@@ -200,7 +201,7 @@
 		<item>uz</item>
 		<item>pl</item>
 		<item>pt-PT</item>
-		<item>pt</item>
+		<item>"pt(?:-BR)?"</item>   <!-- Somehow YouTube uses both "pt" and "pt-BR" for Brazilian Portuguese -->
 		<item>ro</item>
 		<item>sq</item>
 		<item>sk</item>
@@ -242,6 +243,7 @@
 		<item>ka</item>
 		<item>am</item>
 		<item>km</item>
+		<item>zh(?:-.+)?"</item>	<!-- "zn" or "zn-CN" ... -->
 		<item>zh-CN</item>
 		<item>zh-TW</item>
 		<item>zh-HK</item>
@@ -491,9 +493,9 @@
 		<item>@string/pref_screen_sensor_value</item>
 	</string-array>
 
-	<string name="pref_key_disable_immersive_mode" translatable="false">pref_key_disable_immersive_mode</string>
-	<string name="pref_title_disable_immersive_mode">Disable Immersive Mode</string>
-	<string name="pref_summary_disable_immersive_mode">Comments and video description icons and the navigation bar shall always be displayed</string>
+	<string name="pref_key_disable_screen_gestures" translatable="false">pref_key_screen_gestures</string>
+	<string name="pref_title_disable_screen_gestures">Disable video gestures</string>
+	<string name="pref_summary_disable_screen_gestures">Disable the volume, brightness and the seek forward/backward video gestures.</string>
 
 	<string name="pref_youtube_api_key" translatable="false">pref_youtube_api_key</string>
 	<string name="pref_title_youtube_api_key">YouTube API Key</string>
@@ -511,6 +513,10 @@
 	<string name="pref_title_subscriptions_alphabetical_order">Sort Channels Alphabetically</string>
 	<string name="pref_summary_subscriptions_alphabetical_order">If checked, Subscribed Channels will be sorted alphabetically.</string>
 	<string name="pref_key_brightness_level" translatable="false">pref_key_brightness_level</string>
+
+	<string name="pref_category_downloads">Downloads</string>
+	<string name="pref_title_download_to_separate_directories">Download videos in separate Directories</string>
+	<string name="pref_summary_download_to_separate_directories">Videos are saved into separate folders based on the channel name.</string>
 
 	<!--
 		VIDEO BLOCKER
@@ -536,8 +542,9 @@
 	<string name="pref_key_channel_blacklist" translatable="false">pref_key_channel_blacklist</string>
 	<string name="pref_title_channel_blacklist">Channel Blacklist</string>
 	<string name="pref_summary_channel_blacklist">A list of blocked channels.</string>
-	<string name="unblock_button">Unblock</string>
+	<string name="unblock">Unblock</string>
 	<string name="channel_blacklist_updated">Channel blacklist updated.  Please refresh videos.</string>
+	<string name="channel_blacklist_update_failure">Failed to remove the given channel(s) from the blacklist…</string>
 	<string name="channel_blacklist_empty">Channel blacklist is empty.</string>
 
 	<string name="pref_key_channel_whitelist" translatable="false">pref_key_channel_whitelist</string>

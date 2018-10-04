@@ -17,9 +17,11 @@
 
 package free.rm.skytube.gui.fragments;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Rect;
 import android.media.AudioManager;
 import android.net.Uri;
@@ -44,12 +46,14 @@ import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.RequestOptions;
+import com.google.android.exoplayer2.C;
 import com.google.android.exoplayer2.ExoPlayerFactory;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.source.ExtractorMediaSource;
 import com.google.android.exoplayer2.trackselection.AdaptiveTrackSelection;
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
 import com.google.android.exoplayer2.trackselection.TrackSelection;
+import com.google.android.exoplayer2.ui.AspectRatioFrameLayout;
 import com.google.android.exoplayer2.ui.PlayerControlView;
 import com.google.android.exoplayer2.ui.PlayerView;
 import com.google.android.exoplayer2.upstream.DefaultBandwidthMeter;
@@ -72,7 +76,6 @@ import free.rm.skytube.businessobjects.YouTube.POJOs.YouTubeChannelInterface;
 import free.rm.skytube.businessobjects.YouTube.POJOs.YouTubeVideo;
 import free.rm.skytube.businessobjects.YouTube.Tasks.GetVideoDescriptionTask;
 import free.rm.skytube.businessobjects.YouTube.Tasks.GetYouTubeChannelInfoTask;
-import free.rm.skytube.businessobjects.YouTube.VideoBlocker;
 import free.rm.skytube.businessobjects.YouTube.VideoStream.StreamMetaData;
 import free.rm.skytube.businessobjects.db.DownloadedVideosDb;
 import free.rm.skytube.businessobjects.db.PlaybackStatusDb;
@@ -83,9 +86,11 @@ import free.rm.skytube.businessobjects.interfaces.YouTubePlayerFragmentInterface
 import free.rm.skytube.gui.activities.MainActivity;
 import free.rm.skytube.gui.activities.ThumbnailViewerActivity;
 import free.rm.skytube.gui.businessobjects.PlayerViewGestureDetector;
-import free.rm.skytube.gui.businessobjects.SubscribeButton;
+import free.rm.skytube.gui.businessobjects.ResumeVideoTask;
 import free.rm.skytube.gui.businessobjects.adapters.CommentsAdapter;
 import free.rm.skytube.gui.businessobjects.fragments.ImmersiveModeFragment;
+import free.rm.skytube.gui.businessobjects.views.ClickableLinksTextView;
+import free.rm.skytube.gui.businessobjects.views.SubscribeButton;
 import hollowsoft.slidingdrawer.OnDrawerOpenListener;
 import hollowsoft.slidingdrawer.SlidingDrawer;
 
@@ -94,33 +99,33 @@ import hollowsoft.slidingdrawer.SlidingDrawer;
  */
 public class YouTubePlayerV2Fragment extends ImmersiveModeFragment implements YouTubePlayerFragmentInterface {
 
-	private YouTubeVideo		youTubeVideo = null;
-	private YouTubeChannel      youTubeChannel = null;
+	private YouTubeVideo		    youTubeVideo = null;
+	private YouTubeChannel          youTubeChannel = null;
 
-	private PlayerView          playerView;
-	private SimpleExoPlayer     player;
-	private long				playerInitialPosition = 0;
+	private PlayerView              playerView;
+	private SimpleExoPlayer         player;
+	private long				    playerInitialPosition = 0;
 
-	private Menu                menu = null;
+	private Menu                    menu = null;
 
-	private TextView			videoDescTitleTextView = null;
-	private ImageView			videoDescChannelThumbnailImageView = null;
-	private TextView			videoDescChannelTextView = null;
-	private SubscribeButton     videoDescSubscribeButton = null;
-	private TextView			videoDescViewsTextView = null;
-	private ProgressBar         videoDescLikesBar = null;
-	private TextView			videoDescLikesTextView = null;
-	private TextView			videoDescDislikesTextView = null;
-	private View                videoDescRatingsDisabledTextView = null;
-	private TextView			videoDescPublishDateTextView = null;
-	private TextView			videoDescriptionTextView = null;
-	private View				loadingVideoView = null;
-	private SlidingDrawer       videoDescriptionDrawer = null;
-	private SlidingDrawer		commentsDrawer = null;
-	private View				commentsProgressBar = null,
-								noVideoCommentsView = null;
-	private CommentsAdapter     commentsAdapter = null;
-	private ExpandableListView  commentsExpandableListView = null;
+	private TextView			    videoDescTitleTextView = null;
+	private ImageView			    videoDescChannelThumbnailImageView = null;
+	private TextView			    videoDescChannelTextView = null;
+	private SubscribeButton         videoDescSubscribeButton = null;
+	private TextView			    videoDescViewsTextView = null;
+	private ProgressBar             videoDescLikesBar = null;
+	private TextView			    videoDescLikesTextView = null;
+	private TextView			    videoDescDislikesTextView = null;
+	private View                    videoDescRatingsDisabledTextView = null;
+	private TextView			    videoDescPublishDateTextView = null;
+	private ClickableLinksTextView	videoDescriptionTextView = null;
+	private View				    loadingVideoView = null;
+	private SlidingDrawer           videoDescriptionDrawer = null;
+	private SlidingDrawer		    commentsDrawer = null;
+	private View				    commentsProgressBar = null,
+									noVideoCommentsView = null;
+	private CommentsAdapter         commentsAdapter = null;
+	private ExpandableListView      commentsExpandableListView = null;
 
 	public static final String YOUTUBE_VIDEO_OBJ = "YouTubePlayerFragment.yt_video_obj";
 
@@ -132,6 +137,11 @@ public class YouTubePlayerV2Fragment extends ImmersiveModeFragment implements Yo
 
 		// inflate the layout for this fragment
 		View view = inflater.inflate(R.layout.fragment_youtube_player_v2, container, false);
+
+		// prevent the device from sleeping while playing
+		if (getActivity() != null  &&  (getActivity().getWindow()) != null) {
+			getActivity().getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+		}
 
 		// indicate that this fragment has an action bar menu
 		setHasOptionsMenu(true);
@@ -183,9 +193,8 @@ public class YouTubePlayerV2Fragment extends ImmersiveModeFragment implements Yo
 		getSupportActionBar().setDisplayShowHomeEnabled(true);
 
 		// setup the player
-		final PlayerViewGestureHandler playerViewGestureHandler;
 		playerView = view.findViewById(R.id.player_view);
-		playerViewGestureHandler = new PlayerViewGestureHandler();
+		final PlayerViewGestureHandler playerViewGestureHandler = new PlayerViewGestureHandler();
 		playerViewGestureHandler.initView(view);
 		playerView.setOnTouchListener(playerViewGestureHandler);
 		playerView.requestFocus();
@@ -197,6 +206,8 @@ public class YouTubePlayerV2Fragment extends ImmersiveModeFragment implements Yo
 
 		player = ExoPlayerFactory.newSimpleInstance(getContext(), trackSelector);
 		player.setPlayWhenReady(true);
+		playerView.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_FIT);               // ensure that videos are played in their correct aspect ratio
+		player.setVideoScalingMode(C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING);    // ensure that videos are played in their correct aspect ratio
 		playerView.setPlayer(player);
 
 		loadingVideoView = view.findViewById(R.id.loadingVideoView);
@@ -262,27 +273,14 @@ public class YouTubePlayerV2Fragment extends ImmersiveModeFragment implements Yo
 			videoDescRatingsDisabledTextView.setVisibility(View.VISIBLE);
 		}
 
+        new ResumeVideoTask(getContext(), youTubeVideo, new ResumeVideoTask.Callback() {
+            @Override
+            public void loadVideo(int position) {
+                playerInitialPosition = position;
+                YouTubePlayerV2Fragment.this.loadVideo();
+            }
+        }).ask();
 
-		if(!SkyTubeApp.getPreferenceManager().getBoolean(getString(R.string.pref_key_disable_playback_status), false) && PlaybackStatusDb.getVideoDownloadsDb().getVideoWatchedStatus(youTubeVideo).position > 0) {
-			new AlertDialog.Builder(getActivity())
-				.setTitle(R.string.should_resume)
-				.setPositiveButton(R.string.yes, new DialogInterface.OnClickListener() {
-					@Override
-					public void onClick(DialogInterface dialog, int which) {
-						playerInitialPosition = PlaybackStatusDb.getVideoDownloadsDb().getVideoWatchedStatus(youTubeVideo).position;
-						loadVideo();
-					}
-				})
-				.setNegativeButton(R.string.no, new DialogInterface.OnClickListener() {
-					@Override
-					public void onClick(DialogInterface dialogInterface, int i) {
-						loadVideo();
-					}
-				})
-				.show();
-		} else {
-			loadVideo();
-		}
 	}
 
 
@@ -293,6 +291,7 @@ public class YouTubePlayerV2Fragment extends ImmersiveModeFragment implements Yo
 		// if the video is NOT live
 		if (!youTubeVideo.isLiveStream()) {
 			loadingVideoView.setVisibility(View.VISIBLE);
+
 			if(youTubeVideo.isDownloaded()) {
 				Uri uri = youTubeVideo.getFileUri();
 				File file = new File(uri.getPath());
@@ -306,7 +305,7 @@ public class YouTubePlayerV2Fragment extends ImmersiveModeFragment implements Yo
 				} else {
 					loadingVideoView.setVisibility(View.GONE);
 
-					Logger.i(YouTubePlayerV2Fragment.this, ">> PLAYING LOCALLY: %s", youTubeVideo);
+					Logger.i(this, ">> PLAYING LOCALLY: %s", uri);
 					playVideo(uri);
 				}
 			} else {
@@ -316,9 +315,14 @@ public class YouTubePlayerV2Fragment extends ImmersiveModeFragment implements Yo
 						// hide the loading video view (progress bar)
 						loadingVideoView.setVisibility(View.GONE);
 
-						// play the video
-						Logger.i(this, ">> PLAYING: %s", desiredStream.getUri());
-						playVideo(desiredStream.getUri());
+						// Play the video.  Check if this fragment is visible before playing the
+						// video.  It might not be visible if the user clicked on the back button
+						// before the video streams are retrieved (such action would cause the app
+						// to crash if not catered for...).
+						if (isVisible()) {
+							Logger.i(YouTubePlayerV2Fragment.this, ">> PLAYING: %s", desiredStream.getUri());
+							playVideo(desiredStream.getUri());
+						}
 					}
 
 					@Override
@@ -353,7 +357,7 @@ public class YouTubePlayerV2Fragment extends ImmersiveModeFragment implements Yo
 					.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
 						@Override
 						public void onClick(DialogInterface dialog, int which) {
-							playVideoExternally();
+							youTubeVideo.playVideoExternally(getContext());
 							closeActivity();
 						}
 					})
@@ -372,17 +376,9 @@ public class YouTubePlayerV2Fragment extends ImmersiveModeFragment implements Yo
 		ExtractorMediaSource.Factory extMediaSourceFactory = new ExtractorMediaSource.Factory(dataSourceFactory);
 		ExtractorMediaSource mediaSource = extMediaSourceFactory.createMediaSource(videoUri);
 		player.prepare(mediaSource);
-		if(playerInitialPosition > 0)
+
+		if (playerInitialPosition > 0)
 			player.seekTo(playerInitialPosition);
-	}
-
-
-	/**
-	 * Play the video using an external app
-	 */
-	private void playVideoExternally() {
-		Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(youTubeVideo.getVideoUrl()));
-		startActivity(browserIntent);
 	}
 
 
@@ -417,11 +413,12 @@ public class YouTubePlayerV2Fragment extends ImmersiveModeFragment implements Yo
 	public boolean onOptionsItemSelected(MenuItem item) {
 		switch (item.getItemId()) {
 			case R.id.menu_reload_video:
+				playerInitialPosition = player.getContentPosition();
 				loadVideo();
 				return true;
 
 			case R.id.menu_open_video_with:
-				playVideoExternally();
+				youTubeVideo.playVideoExternally(getContext());
 				player.stop();
 				return true;
 
@@ -452,7 +449,7 @@ public class YouTubePlayerV2Fragment extends ImmersiveModeFragment implements Yo
 				return true;
 
 			case R.id.block_channel:
-				VideoBlocker.blockChannel(youTubeChannel.getId(), youTubeChannel.getTitle());
+				youTubeChannel.blockChannel();
 
 			default:
 				return super.onOptionsItemSelected(item);
@@ -496,13 +493,23 @@ public class YouTubePlayerV2Fragment extends ImmersiveModeFragment implements Yo
 		new GetVideoDescriptionTask(youTubeVideo, new GetVideoDescriptionTask.GetVideoDescriptionTaskListener() {
 			@Override
 			public void onFinished(String description) {
-				videoDescriptionTextView.setText(description);
+				videoDescriptionTextView.setTextAndLinkify(description);
 			}
 		}).executeInParallel();
 
 		// check if the user has subscribed to a channel... if he has, then change the state of
 		// the subscribe button
 		new CheckIfUserSubbedToChannelTask(videoDescSubscribeButton, youTubeVideo.getChannelId()).execute();
+	}
+
+
+	@Override
+	public void videoPlaybackStopped() {
+		player.stop();
+		playerView.setPlayer(null);
+		if(!SkyTubeApp.getPreferenceManager().getBoolean(getString(R.string.pref_key_disable_playback_status), false)) {
+			PlaybackStatusDb.getVideoDownloadsDb().setVideoPosition(youTubeVideo, player.getCurrentPosition());
+		}
 	}
 
 
@@ -627,17 +634,20 @@ public class YouTubePlayerV2Fragment extends ImmersiveModeFragment implements Yo
 		private RelativeLayout      indicatorView = null;
 
 		private boolean             isControllerVisible = true;
-		private float               startBrightness = -1.0f;
+		private VideoBrightness     videoBrightness;
 		private float               startVolumePercent = -1.0f;
 		private long                startVideoTime = -1;
 
+		/** Enable/Disable video gestures based on user preferences. */
+		private final boolean       disableGestures = SkyTubeApp.getPreferenceManager().getBoolean(SkyTubeApp.getStr(R.string.pref_key_disable_screen_gestures), false);
+
 		private static final int    MAX_VIDEO_STEP_TIME = 60 * 1000;
-		private static final int    MAX_BRIGHTNESS = 100;
 
 
 		PlayerViewGestureHandler() {
 			super(getContext());
 
+			videoBrightness = new VideoBrightness(getActivity());
 			playerView.setControllerVisibilityListener(new PlayerControlView.VisibilityListener() {
 				@Override
 				public void onVisibilityChange(int visibility) {
@@ -716,7 +726,7 @@ public class YouTubePlayerV2Fragment extends ImmersiveModeFragment implements Yo
 
 		@Override
 		public void onGestureDone() {
-			startBrightness = -1.0f;
+			videoBrightness.onGestureDone();
 			startVolumePercent = -1.0f;
 			startVideoTime = -1;
 			hideIndicator();
@@ -725,29 +735,16 @@ public class YouTubePlayerV2Fragment extends ImmersiveModeFragment implements Yo
 
 		@Override
 		public void adjustBrightness(double adjustPercent) {
-			// We are setting brightness percent to a value that should be from -1.0 to 1.0. We need to limit it here for these values first
-			if (adjustPercent < -1.0f) {
-				adjustPercent = -1.0f;
-			} else if (adjustPercent > 1.0f) {
-				adjustPercent = 1.0f;
+			if (disableGestures) {
+				return;
 			}
 
-			WindowManager.LayoutParams lp = getActivity().getWindow().getAttributes();
-			if (startBrightness < 0) {
-				startBrightness = lp.screenBrightness;
-			}
-			// We are getting a final brightness value when summing current brightness and the percent we got from swipe action. Should be >= 0 and <= 1
-			float targetBrightness = (float) (startBrightness + adjustPercent * 1.0f);
-			if (targetBrightness <= 0.0f) {
-				targetBrightness = 0.0f;
-			} else if (targetBrightness >= 1.0f) {
-				targetBrightness = 1.0f;
-			}
-			lp.screenBrightness = targetBrightness;
-			getActivity().getWindow().setAttributes(lp);
+			// adjust the video's brightness
+			videoBrightness.setVideoBrightness(adjustPercent, getActivity());
 
+			// set indicator
 			indicatorImageView.setImageResource(R.drawable.ic_brightness);
-			indicatorTextView.setText((int) (targetBrightness * MAX_BRIGHTNESS) + "%");
+			indicatorTextView.setText(videoBrightness.getBrightnessString());
 
 			// Show indicator. It will be hidden once onGestureDone will be called
 			showIndicator();
@@ -756,6 +753,10 @@ public class YouTubePlayerV2Fragment extends ImmersiveModeFragment implements Yo
 
 		@Override
 		public void adjustVolumeLevel(double adjustPercent) {
+			if (disableGestures) {
+				return;
+			}
+
 			// We are setting volume percent to a value that should be from -1.0 to 1.0. We need to limit it here for these values first
 			if (adjustPercent < -1.0f) {
 				adjustPercent = -1.0f;
@@ -802,6 +803,10 @@ public class YouTubePlayerV2Fragment extends ImmersiveModeFragment implements Yo
 
 		@Override
 		public void adjustVideoPosition(double adjustPercent, boolean forwardDirection) {
+			if (disableGestures) {
+				return;
+			}
+
 			long totalTime = player.getDuration();
 
 			if (adjustPercent < -1.0f) {
@@ -879,11 +884,121 @@ public class YouTubePlayerV2Fragment extends ImmersiveModeFragment implements Yo
 
 	}
 
-	@Override
-	public void videoPlaybackStopped() {
-		player.stop();
-		if(!SkyTubeApp.getPreferenceManager().getBoolean(getString(R.string.pref_key_disable_playback_status), false)) {
-			PlaybackStatusDb.getVideoDownloadsDb().setVideoPosition(youTubeVideo, player.getCurrentPosition());
+
+
+	////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+	/**
+	 * Adjust video's brightness.  Once the brightness is adjust, it is saved in the preferences to
+	 * be used when a new video is played.
+	 */
+	private static class VideoBrightness {
+
+		/** Current video brightness. */
+		private float   brightness;
+		/** Initial video brightness. */
+		private float   initialBrightness;
+		private static final String SAVE_BRIGHTNESS_FLAG = "VideoBrightness.SAVE_BRIGHTNESS_FLAG";
+
+		/**
+		 * Constructor:  load the previously saved video brightness from the preference and set it.
+		 *
+		 * @param activity  Activity.
+		 */
+		public VideoBrightness(final Activity activity) {
+			loadBrightnessFromPreference();
+			initialBrightness = brightness;
+
+			setVideoBrightness(brightness, activity);
 		}
+
+
+		/**
+		 * Set the video brightness.  Once the video brightness is updated, save it in the preference.
+		 *
+		 * @param adjustPercent Percentage.
+		 * @param activity      Activity.
+		 */
+		public void setVideoBrightness(double adjustPercent, final Activity activity) {
+			// We are setting brightness percent to a value that should be from -1.0 to 1.0. We need to limit it here for these values first
+			if (adjustPercent < -1.0f) {
+				adjustPercent = -1.0f;
+			} else if (adjustPercent > 1.0f) {
+				adjustPercent = 1.0f;
+			}
+
+			// set the brightness instance variable
+			setBrightness(initialBrightness + (float) adjustPercent);
+			// adjust the video brightness as per this.brightness
+			adjustVideoBrightness(activity);
+			// save brightness to the preference
+			saveBrightnessToPreference();
+		}
+
+
+		/**
+		 * Adjust the video brightness.
+		 *
+		 * @param activity  Current activity.
+		 */
+		private void adjustVideoBrightness(final Activity activity) {
+			WindowManager.LayoutParams lp = activity.getWindow().getAttributes();
+			lp.screenBrightness = brightness;
+			activity.getWindow().setAttributes(lp);
+		}
+
+
+		/**
+		 * Saves {@link #brightness} to preference.
+		 */
+		private void saveBrightnessToPreference() {
+			SharedPreferences.Editor editor = SkyTubeApp.getPreferenceManager().edit();
+			editor.putFloat(SAVE_BRIGHTNESS_FLAG, brightness);
+			editor.apply();
+		}
+
+
+		/**
+		 * Loads the brightness from preference and set the {@link #brightness} instance variable.
+		 */
+		private void loadBrightnessFromPreference() {
+			final float brightnessPref = SkyTubeApp.getPreferenceManager().getFloat(SAVE_BRIGHTNESS_FLAG, 1);
+			setBrightness(brightnessPref);
+		}
+
+
+		/**
+		 * Set the {@link #brightness} instance variable.
+		 *
+		 * @param brightness    Brightness (from 0.0 to 1.0).
+		 */
+		private void setBrightness(float brightness) {
+			if (brightness < 0) {
+				brightness = 0;
+			} else if (brightness > 1) {
+				brightness = 1;
+			}
+
+			this.brightness = brightness;
+		}
+
+
+		/**
+		 * @return Brightness as string:  e.g. "21%"
+		 */
+		public String getBrightnessString() {
+			return ((int) (brightness * 100)) + "%";
+		}
+
+
+		/**
+		 * To be called once the swipe gesture is done/completed.
+		 */
+		public void onGestureDone() {
+			initialBrightness = brightness;
+		}
+
 	}
+
 }

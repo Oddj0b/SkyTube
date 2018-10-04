@@ -25,19 +25,20 @@ import java.util.ArrayList;
 import java.util.List;
 
 import free.rm.skytube.R;
+import free.rm.skytube.businessobjects.Logger;
 import free.rm.skytube.businessobjects.db.BookmarksDb;
 import free.rm.skytube.businessobjects.db.DownloadedVideosDb;
-import free.rm.skytube.businessobjects.Logger;
 import free.rm.skytube.gui.businessobjects.MainActivityListener;
 import free.rm.skytube.gui.businessobjects.adapters.SubsAdapter;
 import free.rm.skytube.gui.businessobjects.fragments.FragmentEx;
 
 public class MainFragment extends FragmentEx {
+
 	private RecyclerView				subsListView = null;
 	private SubsAdapter					subsAdapter  = null;
 	private ActionBarDrawerToggle		subsDrawerToggle;
 	private TabLayout                   tabLayout = null;
-	private DrawerLayout 							subsDrawerLayout = null;
+	private DrawerLayout 				subsDrawerLayout = null;
 
 	/** List of fragments that will be displayed as tabs. */
 	private List<VideosGridFragment>	videoGridFragmentsList = new ArrayList<>();
@@ -72,6 +73,7 @@ public class MainFragment extends FragmentEx {
 			downloadedVideosFragment = (DownloadedVideosFragment) getChildFragmentManager().getFragment(savedInstanceState, DOWNLOADED_VIDEOS_FRAGMENT);
 		}
 	}
+
 
 	@Nullable
 	@Override
@@ -188,6 +190,7 @@ public class MainFragment extends FragmentEx {
 		return super.onOptionsItemSelected(item);
 	}
 
+
 	private class VideosPagerAdapter extends FragmentPagerAdapter {
 
 		public VideosPagerAdapter(FragmentManager fm) {
@@ -255,6 +258,7 @@ public class MainFragment extends FragmentEx {
 		super.onSaveInstanceState(outState);
 	}
 
+
 	/**
 	 * Returns true if the subscriptions drawer is opened.
 	 */
@@ -269,4 +273,5 @@ public class MainFragment extends FragmentEx {
 	public void closeDrawer() {
 		subsDrawerLayout.closeDrawer(GravityCompat.START);
 	}
+
 }

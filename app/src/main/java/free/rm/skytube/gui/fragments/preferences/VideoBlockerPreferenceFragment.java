@@ -3,7 +3,6 @@ package free.rm.skytube.gui.fragments.preferences;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.preference.MultiSelectListPreference;
 import android.preference.Preference;
 import android.preference.PreferenceFragment;
 import android.support.annotation.NonNull;
@@ -20,7 +19,6 @@ import org.schabi.newpipe.extractor.channel.ChannelInfo;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -30,11 +28,13 @@ import free.rm.skytube.R;
 import free.rm.skytube.app.SkyTubeApp;
 import free.rm.skytube.businessobjects.AsyncTaskParallel;
 import free.rm.skytube.businessobjects.Logger;
+import free.rm.skytube.businessobjects.YouTube.POJOs.YouTubeChannel;
 import free.rm.skytube.businessobjects.YouTube.VideoStream.HttpDownloader;
 import free.rm.skytube.businessobjects.db.ChannelFilteringDb;
 import free.rm.skytube.gui.businessobjects.MultiSelectListPreferenceDialog;
 import free.rm.skytube.gui.businessobjects.MultiSelectListPreferenceItem;
 import free.rm.skytube.gui.businessobjects.SkyTubeMaterialDialog;
+import free.rm.skytube.gui.businessobjects.adapters.SubsAdapter;
 
 /**
  * Video blocker preference.
@@ -46,7 +46,7 @@ public class VideoBlockerPreferenceFragment extends PreferenceFragment {
 		super.onCreate(savedInstanceState);
 		addPreferencesFromResource(R.xml.preference_video_blocker);
 
-		final MultiSelectListPreference channelBlacklistPreference = (MultiSelectListPreference) findPreference(getString(R.string.pref_key_channel_blacklist));
+		final Preference channelBlacklistPreference = findPreference(getString(R.string.pref_key_channel_blacklist));
 		final Preference channelWhitelistPreference = findPreference(getString(R.string.pref_key_channel_whitelist));
 
 		// initialize the channel filtering UI
@@ -55,6 +55,7 @@ public class VideoBlockerPreferenceFragment extends PreferenceFragment {
 			@Override
 			public boolean onPreferenceChange(Preference preference, Object newValue) {
 				initChannelFilteringPreferences((String) newValue, channelBlacklistPreference, channelWhitelistPreference);
+				Toast.makeText(getActivity(), R.string.setting_updated, Toast.LENGTH_LONG).show();
 				return true;
 			}
 		});
@@ -67,8 +68,10 @@ public class VideoBlockerPreferenceFragment extends PreferenceFragment {
 			}
 		};
 
-
+		// preferred region
 		findPreference(getString(R.string.pref_key_preferred_region)).setOnPreferenceChangeListener(settingUpdatesPreferenceChange);
+
+		// preferred language(s)
 		findPreference(getString(R.string.pref_key_preferred_languages)).setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
 			@Override
 			public boolean onPreferenceClick(Preference preference) {
@@ -88,7 +91,7 @@ public class VideoBlockerPreferenceFragment extends PreferenceFragment {
 	 * @param channelBlacklistPreference    {@link Preference} for channel blacklisting.
 	 * @param channelWhitelistPreference    {@link Preference} for channel whitelisting.
 	 */
-	private void initChannelFilteringPreferences(MultiSelectListPreference channelBlacklistPreference, Preference channelWhitelistPreference) {
+	private void initChannelFilteringPreferences(Preference channelBlacklistPreference, Preference channelWhitelistPreference) {
 		// get the current channel filtering method selected by the user...
 		final String channelFilter = SkyTubeApp.getPreferenceManager().getString(getString(R.string.pref_key_channel_filter_method), getString(R.string.channel_blacklisting_filtering));
 		initChannelFilteringPreferences(channelFilter, channelBlacklistPreference, channelWhitelistPreference);
@@ -102,7 +105,7 @@ public class VideoBlockerPreferenceFragment extends PreferenceFragment {
 	 * @param channelBlacklistPreference    {@link Preference} for channel blacklisting.
 	 * @param channelWhitelistPreference    {@link Preference} for channel whitelisting.
 	 */
-	private void initChannelFilteringPreferences(String channelFilter, MultiSelectListPreference channelBlacklistPreference, Preference channelWhitelistPreference) {
+	private void initChannelFilteringPreferences(String channelFilter, Preference channelBlacklistPreference, Preference channelWhitelistPreference) {
 		if (channelFilter.equals(getString(R.string.channel_blacklisting_filtering))) {
 			initChannelBlacklistingPreference(channelBlacklistPreference);
 			channelBlacklistPreference.setEnabled(true);
@@ -114,62 +117,25 @@ public class VideoBlockerPreferenceFragment extends PreferenceFragment {
 		} else {
 			Logger.e(this, "Unknown channel filtering preference", channelFilter);
 		}
+
+		// User has just changed the filtering method and hence there might be a subbed channel
+		// that needs to be filtered out...  Therefore, we need to notify the SubsAdapter to
+		// refresh...
+		SubsAdapter.get(getActivity()).refreshSubsList();
 	}
 
 
 	/**
 	 * Initialized the channel blacklist preference.
 	 */
-	private void initChannelBlacklistingPreference(final MultiSelectListPreference channelBlacklistPreference) {
-		//Need to have the blocked channels on a separate variable here
-		//Otherwise unblocked channels still on blocked channels list.
-		String[] blockedChannelsName = getBlacklistedChannelNames();
-
-		channelBlacklistPreference.setEntryValues(blockedChannelsName);
-		channelBlacklistPreference.setEntries(blockedChannelsName);
-		channelBlacklistPreference.setPositiveButtonText(R.string.unblock_button);
+	private void initChannelBlacklistingPreference(final Preference channelBlacklistPreference) {
 		channelBlacklistPreference.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
 			@Override
 			public boolean onPreferenceClick(Preference preference) {
-				if (ChannelFilteringDb.getChannelFilteringDb().getBlacklistedChannelNamesList().isEmpty()) {
-					Toast.makeText(getActivity(), R.string.channel_blacklist_empty, Toast.LENGTH_LONG).show();
-				}
+				new BlacklistChannelsDialog(getActivity()).show();
 				return true;
 			}
 		});
-		channelBlacklistPreference.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
-			@Override
-			public boolean onPreferenceChange(Preference preference, Object o) {
-				// The selected channels are the channels that user wishes to unblock.
-				// Object o gives us a set of blocked channel names.
-				final Collection<String> selectedChannels = (Collection<String>) o;
-
-				if (!selectedChannels.isEmpty()) {
-					for (String channel : selectedChannels) {
-						ChannelFilteringDb.getChannelFilteringDb().unblacklist(channel);
-					}
-
-					//We set the last updated version of DB here again
-					//So we will not see unblocked channels.
-					String[] channels = getBlacklistedChannelNames();
-					channelBlacklistPreference.setEntryValues(channels);
-					channelBlacklistPreference.setEntries(channels);
-
-					Toast.makeText(getActivity(), R.string.channel_blacklist_updated, Toast.LENGTH_LONG).show();
-				}
-
-				return true;
-			}
-		});
-	}
-
-
-	/**
-	 * @return A list of blacklisted channel names.
-	 */
-	private String[] getBlacklistedChannelNames() {
-		final List<String> channelNames = ChannelFilteringDb.getChannelFilteringDb().getBlacklistedChannelNamesList();
-		return channelNames.toArray(new String[channelNames.size()]);
 	}
 
 
@@ -282,6 +248,46 @@ public class VideoBlockerPreferenceFragment extends PreferenceFragment {
 
 	//////////////////////////
 
+
+	/**
+	 * Display a dialog which allows the user to select his preferred language(s).
+	 */
+	private class BlacklistChannelsDialog extends MultiSelectListPreferenceDialog {
+
+		public BlacklistChannelsDialog(@NonNull Context context) {
+			super(context);
+
+			// set the items of this list as the blacklisted channels
+			setItems(ChannelFilteringDb.getChannelFilteringDb().getBlacklistedChannels());
+
+			title(R.string.pref_title_channel_blacklist);
+			positiveText(R.string.unblock);
+			onPositive(new MaterialDialog.SingleButtonCallback() {
+				@Override
+				public void onClick(@NonNull MaterialDialog dialog, @NonNull DialogAction which) {
+					final List<MultiSelectListPreferenceItem> channels = getSelectedItems();
+
+					if (channels != null  &&  !channels.isEmpty()) {
+						// remove the selected channels from the blacklist
+						final boolean success = ChannelFilteringDb.getChannelFilteringDb().unblacklist(channels);
+
+						Toast.makeText(getActivity(),
+								success ? R.string.channel_blacklist_updated : R.string.channel_blacklist_update_failure,
+								Toast.LENGTH_LONG)
+								.show();
+					}
+
+					dialog.dismiss();
+				}
+			});
+		}
+
+	}
+
+
+
+	//////////////////////////
+
 	/**
 	 * Display a dialog which allows the user to whitelist channels.
 	 */
@@ -301,11 +307,17 @@ public class VideoBlockerPreferenceFragment extends PreferenceFragment {
 			onPositive(new MaterialDialog.SingleButtonCallback() {
 				@Override
 				public void onClick(@NonNull MaterialDialog dialog, @NonNull DialogAction which) {
-					final List<MultiSelectListPreferenceItem> channels = getSelectedItems();
+					final List<YouTubeChannel> channelList = toYouTubeChannelList(getSelectedItems());
 
-					if (channels != null  &&  !channels.isEmpty()) {
+					if (!channelList.isEmpty()) {
 						// unwhitelist the selected channels
-						final boolean success = ChannelFilteringDb.getChannelFilteringDb().unwhitelist(channels);
+						boolean success = true;
+
+						for (YouTubeChannel channel : channelList) {
+							if (!channel.blockChannel(false)) {
+								success = false;
+							}
+						}
 
 						Toast.makeText(getActivity(),
 								success ? R.string.channel_unwhitelist_success : R.string.channel_unwhitelist_failure,
@@ -324,6 +336,20 @@ public class VideoBlockerPreferenceFragment extends PreferenceFragment {
 					displayInputChannelUrlDialog();
 				}
 			});
+		}
+
+
+		/**
+		 * Converts List<MultiSelectListPreferenceItem> to List<YouTubeChannel>.
+		 */
+		private List<YouTubeChannel> toYouTubeChannelList(final List<MultiSelectListPreferenceItem> channels) {
+			List<YouTubeChannel> channelList = new ArrayList<>();
+
+			for (MultiSelectListPreferenceItem channel : channels) {
+				channelList.add(new YouTubeChannel(channel.id, channel.text));
+			}
+
+			return channelList;
 		}
 
 
@@ -400,7 +426,7 @@ public class VideoBlockerPreferenceFragment extends PreferenceFragment {
 
 			try {
 				NewPipe.init(new HttpDownloader());
-				StreamingService youtubeService = ServiceList.YouTube.getService();
+				StreamingService youtubeService = ServiceList.YouTube;
 
 				ChannelInfo channelInfo = ChannelInfo.getInfo(youtubeService, channelUrl);
 				channel = new MultiSelectListPreferenceItem(channelInfo.getId(), channelInfo.getName(), false);
